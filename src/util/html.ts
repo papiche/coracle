@@ -1,3 +1,5 @@
+import logger from "src/util/logger"
+
 export const copyToClipboard = text => {
   const {activeElement} = document
   const input = document.createElement("textarea")
@@ -38,7 +40,7 @@ export const stripExifData = async (file, opts: CompressorOpts = {}) => {
       maxHeight: 2048,
       success: resolve,
       error: e => {
-        console.warn("Failed to compress file", e)
+        logger.warn("Failed to compress file", e)
         // Non-images break compressor
         if (e.toString().includes("File or Blob")) {
           return resolve(file)

@@ -1,4 +1,5 @@
 import {openDB, deleteDB} from "idb"
+import logger from "src/util/logger"
 import type {IDBPDatabase} from "idb"
 import type {Unsubscriber} from "svelte/store"
 import {writable} from "svelte/store"
@@ -63,7 +64,7 @@ export const bulkPut = async (name: string, data: any[]) => {
       try {
         store.put(item)
       } catch (e) {
-        console.error(e, item)
+        logger.error(e, item)
       }
     }),
   )
@@ -89,7 +90,7 @@ export const initStorage = async (
   adapters: Record<string, StorageAdapter>,
 ) => {
   if (!window.indexedDB) {
-    console.warn("IndexedDB not available, running without persistence")
+    logger.warn("IndexedDB not available, running without persistence")
     ready.resolve()
     return
   }
@@ -115,7 +116,7 @@ export const initStorage = async (
           try {
             db.createObjectStore(name, {keyPath})
           } catch (e) {
-            console.warn(e)
+            logger.warn(e)
           }
         }
       },
@@ -131,7 +132,7 @@ export const initStorage = async (
       }),
     )
   } catch (e) {
-    console.error("Failed to initialize IndexedDB:", e)
+    logger.error("Failed to initialize IndexedDB:", e)
     ready.resolve()
   }
 }

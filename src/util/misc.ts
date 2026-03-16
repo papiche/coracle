@@ -26,10 +26,18 @@ export const ticker = () => {
 }
 
 export const formatDateAsLocalISODate = (date: Date) => {
-  const offset = date.getTimezoneOffset() * 60000
-  const datetime = new Date(date.getTime() - offset).toISOString()
-
-  return datetime
+  // Use local date methods to obtain the local calendar values without manipulating UTC.
+  // The old approach subtracted the offset and called .toISOString() which produced a
+  // string containing LOCAL time values but ending with "Z" (UTC marker) — misleading for
+  // any system that parses ISO 8601 dates.
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const y = date.getFullYear()
+  const mo = pad(date.getMonth() + 1)
+  const d = pad(date.getDate())
+  const h = pad(date.getHours())
+  const mi = pad(date.getMinutes())
+  const s = pad(date.getSeconds())
+  return `${y}-${mo}-${d}T${h}:${mi}:${s}`
 }
 
 export const formatTimestampAsLocalISODate = (ts: number) => {

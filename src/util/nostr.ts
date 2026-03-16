@@ -156,12 +156,20 @@ export const getContentWarning = (e: TrustedEvent) =>
   getTagValue("content-warning", e.tags) ||
   getTopicTagValues(e.tags).find(t => WARN_TAGS.has(t.toLowerCase()))
 
+// Max time to wait for a NIP-05 DNS/HTTP resolution before falling back to sync parsing
+const NIP05_TIMEOUT_MS = 5000
+
 export const parseAnything = async entity => {
   if (entity.includes("@")) {
-    const profile = await nip05.queryProfile(entity)
+    try {
+      const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), NIP05_TIMEOUT_MS))
+      const profile = await Promise.race([nip05.queryProfile(entity), timeout])
 
-    if (profile) {
-      return {type: "npub", data: profile.pubkey}
+      if (profile) {
+        return {type: "npub", data: profile.pubkey}
+      }
+    } catch {
+      // NIP-05 lookup failed — fall through to sync parsing
     }
   }
 

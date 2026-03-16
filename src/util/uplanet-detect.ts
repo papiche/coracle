@@ -1,4 +1,5 @@
 // Auto-detection of UPlanet/Astroport services based on deployment context.
+import logger from "src/util/logger"
 // When Coracle is served from an IPFS gateway co-located with Astroport,
 // this module derives relay, API, and upload URLs from window.location.
 // Returns null when not on a recognized UPlanet gateway — zero impact on standard users.
@@ -63,14 +64,14 @@ export async function verifyUPlanetServices(services: UPlanetServices): Promise<
     })
     if (res.ok) {
       _verified = services
-      console.info("[UPlanet] Services detected:", services.relayUrl, services.apiUrl)
+      logger.info("[UPlanet] Services detected:", services.relayUrl, services.apiUrl)
       return true
     }
   } catch {
     // ignore
   }
 
-  console.info("[UPlanet] Gateway detected but services unreachable, using defaults")
+  logger.info("[UPlanet] Gateway detected but services unreachable, using defaults")
   _verified = null
   return false
 }

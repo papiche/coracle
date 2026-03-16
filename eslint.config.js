@@ -41,6 +41,9 @@ export default [
       "no-extra-semi": "off",
       "no-async-promise-executor": "off",
       "prefer-const": ["error", {destructuring: "all"}],
+      // Enforce use of src/util/logger instead of console directly.
+      // VITE_LOG_LEVEL is only respected when going through the logger.
+      "no-console": "warn",
       "svelte/valid-compile": "off",
       "svelte/no-at-html-tags": "off",
       "@typescript-eslint/no-explicit-any": "off",
@@ -51,5 +54,10 @@ export default [
         {args: "none", destructuredArrayIgnorePattern: "^_d?$", caughtErrors: "none"},
       ],
     },
+  },
+  // The logger itself must call console — allow it there only
+  {
+    files: ["src/util/logger.ts"],
+    rules: {"no-console": "off"},
   },
 ]

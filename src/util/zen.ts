@@ -1,4 +1,5 @@
 import {writable} from "svelte/store"
+import logger from "src/util/logger"
 
 /**
  * ZEN Balance Service
@@ -74,9 +75,13 @@ export interface ZenReceivability {
 // Fetch timeout (10 seconds)
 const FETCH_TIMEOUT_MS = 10000
 
+// Fallback API used when the page is served from an unrecognised hostname
+// (e.g. a public IPFS gateway that is not a local UPlanet node).
+const DEFAULT_ZEN_API = "https://u.copylaradio.com"
+
 // API URL calculation (from current page URL)
 export function getApiServerUrl(): string {
-  if (typeof window === "undefined") return ""
+  if (typeof window === "undefined") return DEFAULT_ZEN_API
 
   const url = new URL(window.location.href)
 
@@ -87,6 +92,14 @@ export function getApiServerUrl(): string {
   let port = url.port
   if (port === "8080") {
     port = "54321"
+  }
+
+  // Guard: if the derived hostname doesn't look like a local or UPlanet host, use the default
+  const isLocal = /^(localhost|127\.0\.0\.1)$/.test(hostname)
+  const isPrivate = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname)
+  const isUPlanet = hostname.startsWith("u.")
+  if (!isLocal && !isPrivate && !isUPlanet) {
+    return DEFAULT_ZEN_API
   }
 
   // Build the API URL
@@ -132,9 +145,9 @@ export async function checkZenBalance(address: string): Promise<ZenBalance | nul
     return null
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      console.error("Timeout checking ZEN balance for", address)
+      logger.warn("Timeout checking ZEN balance for", address)
     } else {
-      console.error("Error checking ZEN balance for", address, ":", error)
+      logger.error("Error checking ZEN balance for", address, ":", error)
     }
     return null
   } finally {
@@ -364,9 +377,9 @@ export async function checkZenCardShares(email: string): Promise<ZenCardShares |
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      console.error("Timeout checking ZEN Card shares for", email)
+      logger.warn("Timeout checking ZEN Card shares for", email)
     } else {
-      console.error("Error checking ZEN Card shares:", error)
+      logger.error("Error checking ZEN Card shares:", error)
     }
     return null
   } finally {
