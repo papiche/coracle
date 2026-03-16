@@ -248,19 +248,25 @@ export const defaultSettings = {
   show_media: true,
   send_delay: 0, // undo send delay in ms
   pow_difficulty: 0,
-  muted_words: [], // Deprecated
+  muted_words: [] as string[], // Deprecated
   hide_sensitive: true,
   report_analytics: true,
   min_wot_score: 0,
   min_pow_difficulty: 0,
   enable_client_tag: false,
   auto_authenticate2: true,
-  note_actions: ["zaps", "replies", "reactions", "recommended_apps"],
-  upload_type: "blossom",
+  note_actions: ["zaps", "replies", "reactions", "recommended_apps"] as string[],
+  upload_type: "blossom" as "blossom" | "nip96",
   imgproxy_url: "",
   dufflepud_url: env.DUFFLEPUD_URL,
   platform_zap_split: env.PLATFORM_ZAP_SPLIT,
 }
+
+/** Concrete type of user settings, derived from the default values object */
+export type UserSettings = typeof defaultSettings
+
+/** Keys of UserSettings — use with getSetting() for type safety */
+export type UserSettingKey = keyof UserSettings
 
 export const settingsEvents = deriveEvents({repository, filters: [{kinds: [APP_DATA]}]})
 
@@ -281,8 +287,15 @@ export const userSettings = withGetter<typeof defaultSettings>(
   }),
 )
 
-export function getSetting<T = any>(k: string): T {
-  return userSettings.get()[k] as T
+/**
+ * Retrieve a user setting by key with full type inference.
+ * Overload 1: known key → correct value type from defaultSettings
+ * Overload 2: unknown string key → generic T (escape hatch)
+ */
+export function getSetting<K extends UserSettingKey>(k: K): UserSettings[K]
+export function getSetting<T>(k: string): T
+export function getSetting(k: string) {
+  return (userSettings.get() as Record<string, unknown>)[k]
 }
 
 export const imgproxy = (url: string, {w = 640, h = 1024} = {}) => {
@@ -583,11 +596,14 @@ export const userFavoritedFeeds = derived(userFeedFavorites, $list =>
   getAddressTagValues(getListTags($list)).map(repository.getEvent).filter(identity).map(readFeed),
 )
 
+type FeedSearchOption = {feed: PublishedFeed; score: number}
+
 export class FeedSearch extends SearchHelper<PublishedFeed, string> {
   getSearch = () => {
     const $feedFavoritesByAddress = feedFavoritesByAddress.get()
-    const getScore = feed => $feedFavoritesByAddress.get(getAddress(feed.event))?.length || 0
-    const options = this.options.map(feed => ({feed, score: getScore(feed)}))
+    const getScore = (feed: PublishedFeed) =>
+      $feedFavoritesByAddress.get(getAddress(feed.event))?.length || 0
+    const options: FeedSearchOption[] = this.options.map(feed => ({feed, score: getScore(feed)}))
     const fuse = new Fuse(options, {
       keys: ["feed.title", "feed.description"],
       shouldSort: false,
@@ -596,13 +612,14 @@ export class FeedSearch extends SearchHelper<PublishedFeed, string> {
 
     return (term: string) => {
       if (!term) {
-        return sortBy(item => -item.score, options).map(item => item.feed)
+        return sortBy((item: FeedSearchOption) => -item.score, options).map(item => item.feed)
       }
 
+      type FuseResult = {score: number; item: FeedSearchOption}
       return sortBy(
-        (r: any) => r.score - Math.pow(Math.max(0, r.item.score), 1 / 100),
-        fuse.search(term),
-      ).map((r: any) => r.item.feed)
+        (r: FuseResult) => (r.score ?? 1) - Math.pow(Math.max(0, r.item.score), 1 / 100),
+        fuse.search(term) as FuseResult[],
+      ).map((r: FuseResult) => r.item.feed)
     }
   }
 
