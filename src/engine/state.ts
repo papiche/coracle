@@ -1,5 +1,4 @@
 import {
-  displayProfileByPubkey,
   ensurePlaintext,
   followListsByPubkey,
   profilesByPubkey,
@@ -40,7 +39,6 @@ import {
   sortBy,
   max,
   always,
-  tryCatch,
   first,
   remove,
   call,
@@ -430,9 +428,16 @@ export const isEventMuted = withGetter(
           }
 
           if (regex) {
+            // Fast path: check event content first (direct property — no store lookup)
             if (e.content?.toLowerCase().match(regex)) return true
-            if (displayProfileByPubkey(e.pubkey).toLowerCase().match(regex)) return true
-            if (tryCatch(() => $profilesByPubkey.get(e.pubkey)?.nip05?.match(regex))) return true
+
+            // Lazy profile lookup: only reached if content didn't match.
+            // Use the already-subscribed $profilesByPubkey map to avoid the
+            // extra fallback logic inside displayProfileByPubkey().
+            const profile = $profilesByPubkey.get(e.pubkey)
+            const displayName = (profile?.name || profile?.display_name || "").toLowerCase()
+            if (displayName && displayName.match(regex)) return true
+            if (profile?.nip05?.match(regex)) return true
           }
 
           if (strict || $userFollows.has(e.pubkey)) return false
@@ -618,23 +623,26 @@ export class FeedSearch extends SearchHelper<PublishedFeed, string> {
   // Cache the Fuse instance across calls to avoid rebuilding the index on every keystroke.
   private _fuse: Fuse<FeedSearchOption> | null = null
   private _fuseOptions: FeedSearchOption[] = []
+  // O(1) change detection: compare store references instead of iterating options
+  private _lastOptionsRef: PublishedFeed[] | null = null
+  private _lastFavoritesRef: Map<string, unknown> | null = null
 
   getSearch = () => {
     const $feedFavoritesByAddress = feedFavoritesByAddress.get()
-    const getScore = (feed: PublishedFeed) =>
-      $feedFavoritesByAddress.get(getAddress(feed.event))?.length || 0
-    const options: FeedSearchOption[] = this.options.map(feed => ({feed, score: getScore(feed)}))
 
-    // Rebuild Fuse only when the underlying data changes (different feeds or different scores)
-    const changed =
-      !this._fuse ||
-      options.length !== this._fuseOptions.length ||
-      options.some(
-        (o, i) => o.feed !== this._fuseOptions[i]?.feed || o.score !== this._fuseOptions[i]?.score,
-      )
-    if (changed) {
-      this._fuseOptions = options
-      this._fuse = new Fuse(options, {
+    // If neither the options list nor the favourites map changed reference,
+    // the Fuse index is still valid — skip any rebuild entirely (O(1)).
+    const optionsChanged = (this.options as unknown) !== this._lastOptionsRef
+    const favoritesChanged = ($feedFavoritesByAddress as unknown) !== this._lastFavoritesRef
+
+    if (!this._fuse || optionsChanged || favoritesChanged) {
+      this._lastOptionsRef = this.options as unknown as PublishedFeed[]
+      this._lastFavoritesRef = $feedFavoritesByAddress as unknown as Map<string, unknown>
+
+      const getScore = (feed: PublishedFeed) =>
+        $feedFavoritesByAddress.get(getAddress(feed.event))?.length || 0
+      this._fuseOptions = this.options.map(feed => ({feed, score: getScore(feed)}))
+      this._fuse = new Fuse(this._fuseOptions, {
         keys: ["feed.title", "feed.description"],
         shouldSort: false,
         includeScore: true,
@@ -644,7 +652,9 @@ export class FeedSearch extends SearchHelper<PublishedFeed, string> {
 
     return (term: string) => {
       if (!term) {
-        return sortBy((item: FeedSearchOption) => -item.score, options).map(item => item.feed)
+        return sortBy((item: FeedSearchOption) => -item.score, this._fuseOptions).map(
+          item => item.feed,
+        )
       }
 
       type FuseResult = {score: number; item: FeedSearchOption}

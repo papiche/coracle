@@ -26,8 +26,9 @@ export type ProofOfWork = {
 export const makePow = (event: OwnedEvent, difficulty: number): ProofOfWork => {
   const worker = new PowWorker()
 
-  // Capture reject so cancel() can terminate the promise cleanly
-  let _reject: (reason: Error) => void
+  // Initialise with a no-op to guard against the (unlikely) case where cancel()
+  // is called before the Promise executor runs (JS event-loop edge case).
+  let _reject: (reason: Error) => void = () => {}
 
   const result = new Promise<HashedEvent>((resolve, reject) => {
     _reject = reject

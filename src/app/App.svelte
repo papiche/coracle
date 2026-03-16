@@ -82,6 +82,8 @@
   import UserSettings from "src/app/views/UserSettings.svelte"
   import Zap from "src/app/views/Zap.svelte"
   import {onMount} from "svelte"
+  import {Capacitor} from "@capacitor/core"
+  import {App as CapApp} from "@capacitor/app"
   import {logUsage} from "src/app/state"
   import {
     router,
@@ -406,11 +408,26 @@
 
     const unsubRouter = router.listen()
 
+    // Android hardware back button — close modals or navigate back (Capacitor only)
+    let removeBackListener: (() => void) | null = null
+    if (Capacitor.isNativePlatform()) {
+      CapApp.addListener("backButton", () => {
+        if (get(router.modal)) {
+          router.clearModals()
+        } else {
+          router.pop()
+        }
+      }).then(handle => {
+        removeBackListener = () => handle.remove()
+      })
+    }
+
     return () => {
       unsubPage()
       unsubModal()
       unsubRouter()
       unsubHistory()
+      removeBackListener?.()
     }
   })
 
