@@ -12,9 +12,19 @@ export class AudioController extends EventEmitter {
     super()
 
     if (url.endsWith("m3u8")) {
-      this.hls = new Hls()
-      this.hls.loadSource(this.url)
-      this.hls.attachMedia(this.audio)
+      // Prefer native HLS playback (iOS/Safari, Capacitor Android/iOS) to avoid loading hls.js.
+      // hls.js is only needed when the browser does not support HLS natively.
+      const supportsNativeHls =
+        this.audio.canPlayType("application/vnd.apple.mpegurl") !== "" ||
+        this.audio.canPlayType("audio/mpegurl") !== ""
+
+      if (supportsNativeHls) {
+        this.audio.src = url
+      } else {
+        this.hls = new Hls()
+        this.hls.loadSource(this.url)
+        this.hls.attachMedia(this.audio)
+      }
     } else {
       this.audio.src = url
     }

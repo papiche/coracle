@@ -363,12 +363,32 @@ export const userMutedTopics = derived(
 
 export const userPins = derived(userPinList, l => new Set(getTagValues(["e"], getListTags(l))))
 
+/** Escape all RegExp meta-characters in a user-supplied string */
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+/**
+ * Pre-compiled mute regex — rebuilt only when the muted-word lists change,
+ * NOT on every event evaluation. This avoids O(n_events × n_rebuilds) RegExp
+ * allocations that would happen if the regex stayed inside isEventMuted.
+ */
+export const muteRegex = derived(
+  [userSettings, userMutedWords],
+  ([$settings, $mutedWords]: [typeof defaultSettings, Set<string>]) => {
+    const words = [...$settings.muted_words, ...$mutedWords]
+      .map(w => escapeRegExp(w.toLowerCase().trim()))
+      .filter(Boolean)
+    return words.length > 0
+      ? new RegExp(`\\b(${words.join("|")})\\b`, "i")
+      : null
+  },
+)
+
 export const isEventMuted = withGetter(
   derived(
     [
       userMutedEvents,
       userMutedPubkeys,
-      userMutedWords,
+      muteRegex,
       userMutedTopics,
       userFollows,
       userSettings,
@@ -378,20 +398,16 @@ export const isEventMuted = withGetter(
     ([
       $userMutedEvents,
       $userMutedPubkeys,
-      $userMutedWords,
+      $muteRegex,
       $userMutedTopics,
       $userFollows,
       $userSettings,
       $profilesByPubkey,
       $pubkey,
     ]) => {
-      const words = [...$userSettings.muted_words, ...$userMutedWords]
       const minWot = $userSettings.min_wot_score
       const minPow = $userSettings.min_pow_difficulty
-      const regex =
-        words.length > 0
-          ? new RegExp(`\\b(${words.map(w => w.toLowerCase().trim()).join("|")})\\b`)
-          : null
+      const regex = $muteRegex
 
       return cached({
         maxSize: 5000,

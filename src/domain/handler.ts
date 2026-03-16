@@ -15,9 +15,21 @@ export type Handler = {
   nip05?: string
 }
 
+/** Subset of NIP-01 kind:0 metadata relevant to NIP-89 handler discovery */
+type HandlerMeta = {
+  name?: string
+  display_name?: string
+  image?: string
+  picture?: string
+  about?: string
+  website?: string
+  lud16?: string
+  nip05?: string
+}
+
 export const readHandlers = (event: TrustedEvent) => {
   const {d: identifier} = fromPairs(event.tags)
-  const meta = parseJson(event.content)
+  const meta = parseJson(event.content) as HandlerMeta | null
   const normalizedMeta = {
     name: meta?.name || meta?.display_name || "",
     image: meta?.image || meta?.picture || "",

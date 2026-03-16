@@ -156,8 +156,9 @@ export const getContentWarning = (e: TrustedEvent) =>
   getTagValue("content-warning", e.tags) ||
   getTopicTagValues(e.tags).find(t => WARN_TAGS.has(t.toLowerCase()))
 
-// Max time to wait for a NIP-05 DNS/HTTP resolution before falling back to sync parsing
-const NIP05_TIMEOUT_MS = 5000
+// Max time to wait for a NIP-05 DNS/HTTP resolution before falling back to sync parsing.
+// 3 s is a reasonable ceiling on mobile networks; a slow NIP-05 server blocks the search UI.
+const NIP05_TIMEOUT_MS = 3000
 
 export const parseAnything = async entity => {
   if (entity.includes("@")) {
