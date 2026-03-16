@@ -44,6 +44,21 @@ export default [
       // Enforce use of src/util/logger instead of console directly.
       // VITE_LOG_LEVEL is only respected when going through the logger.
       "no-console": "warn",
+      // Prefer importing from "src/app/util" (the barrel) or the new
+      // "src/app/util/navigation" file rather than the deprecated barrel router.ts.
+      // This rule nudges new code in the right direction without breaking existing imports.
+      "no-restricted-imports": [
+        "warn",
+        {
+          paths: [
+            {
+              name: "src/app/util/router",
+              message:
+                "Prefer 'src/app/util/navigation' or 'src/app/util' to avoid confusion with the base routing engine (src/util/router).",
+            },
+          ],
+        },
+      ],
       "svelte/valid-compile": "off",
       "svelte/no-at-html-tags": "off",
       "@typescript-eslint/no-explicit-any": "off",

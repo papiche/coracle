@@ -107,18 +107,70 @@ export function getApiServerUrl(): string {
   return port ? `${protocol}//${hostname}:${port}` : `${protocol}//${hostname}`
 }
 
+// Cached resolved API URL (set once after health check succeeds or fails)
+let _resolvedApiUrl: string | null = null
+let _resolvedApiUrlPromise: Promise<string> | null = null
+
 /**
- * Check ZEN balance for a Ğ1 public key or Duniter v2s SS58 address
- * UPassport /check_balance accepts both formats (auto-converts v1→SS58 via G1check.sh)
+ * Resolve the best available ZEN API URL with a 2-second health check.
+ * Tries the local UPlanet instance first; falls back to DEFAULT_ZEN_API if unreachable.
+ * The result is cached after the first resolution — no repeated round-trips.
+ */
+export async function resolveApiServerUrl(): Promise<string> {
+  if (_resolvedApiUrl !== null) return _resolvedApiUrl
+
+  if (!_resolvedApiUrlPromise) {
+    _resolvedApiUrlPromise = (async () => {
+      const local = getApiServerUrl()
+
+      // Already pointing to the default — no health check needed
+      if (local === DEFAULT_ZEN_API) {
+        _resolvedApiUrl = DEFAULT_ZEN_API
+        return DEFAULT_ZEN_API
+      }
+
+      try {
+        const res = await fetch(`${local}/.well-known/nostr/nip96.json`, {
+          method: "HEAD",
+          signal: AbortSignal.timeout(2000),
+        })
+        if (res.ok) {
+          logger.info("[ZEN] Local API reachable:", local)
+          _resolvedApiUrl = local
+          return local
+        }
+      } catch {
+        // Local instance unreachable or too slow — fall back silently
+      }
+
+      logger.info("[ZEN] Local API not reachable, using fallback:", DEFAULT_ZEN_API)
+      _resolvedApiUrl = DEFAULT_ZEN_API
+      return DEFAULT_ZEN_API
+    })()
+  }
+
+  return _resolvedApiUrlPromise
+}
+
+/** Build a ZenBalance result representing a fetch/parse error (non-null for callers to display) */
+const zenError = (address: string, error: string): ZenBalance => ({
+  g1Balance: 0,
+  zenBalance: 0,
+  g1pub: address,
+  error,
+})
+
+/**
+ * Check ZEN balance for a Ğ1 public key or Duniter v2s SS58 address.
+ * Returns a ZenBalance with `error` set on network/timeout failure, or null if no data.
  * @param address - The Ğ1 public key or SS58 address to check
- * @returns Promise<ZenBalance | null>
  */
 export async function checkZenBalance(address: string): Promise<ZenBalance | null> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
   try {
-    const apiUrl = getApiServerUrl()
+    const apiUrl = await resolveApiServerUrl()
     const response = await fetch(`${apiUrl}/check_balance?g1pub=${encodeURIComponent(address)}`, {
       method: "GET",
       headers: {Accept: "application/json"},
@@ -146,10 +198,11 @@ export async function checkZenBalance(address: string): Promise<ZenBalance | nul
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       logger.warn("Timeout checking ZEN balance for", address)
+      return zenError(address, "Balance indisponible (timeout)")
     } else {
       logger.error("Error checking ZEN balance for", address, ":", error)
+      return zenError(address, String(error))
     }
-    return null
   } finally {
     clearTimeout(timeoutId)
   }

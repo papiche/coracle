@@ -18,14 +18,20 @@ export const estimateWork = (difficulty: number) =>
   Math.ceil(benchmark.get() * Math.pow(2, difficulty - benchmarkDifficulty))
 
 export type ProofOfWork = {
-  worker: Worker
+  /** Cancel the PoW computation and reject the result promise immediately */
+  cancel: () => void
   result: Promise<HashedEvent>
 }
 
 export const makePow = (event: OwnedEvent, difficulty: number): ProofOfWork => {
   const worker = new PowWorker()
 
+  // Capture reject so cancel() can terminate the promise cleanly
+  let _reject: (reason: Error) => void
+
   const result = new Promise<HashedEvent>((resolve, reject) => {
+    _reject = reject
+
     worker.onmessage = (e: MessageEvent<HashedEvent>) => {
       resolve(e.data)
       worker.terminate()
@@ -36,10 +42,26 @@ export const makePow = (event: OwnedEvent, difficulty: number): ProofOfWork => {
       worker.terminate()
     }
 
-    worker.postMessage({difficulty, event})
+    // Serialize only the canonical NIP-01 fields to avoid transferring
+    // unexpected properties and to ensure key order is always correct.
+    worker.postMessage({
+      difficulty,
+      event: {
+        pubkey: event.pubkey,
+        created_at: event.created_at,
+        kind: event.kind,
+        tags: event.tags,
+        content: event.content,
+      },
+    })
   })
 
-  return {worker, result}
+  const cancel = () => {
+    worker.terminate()
+    _reject(new Error("PoW cancelled"))
+  }
+
+  return {cancel, result}
 }
 
 export const getPow = (event: HashedEvent): number => {

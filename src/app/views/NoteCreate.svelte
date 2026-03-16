@@ -102,7 +102,7 @@
     if (options.pow_difficulty) {
       publishing = "pow"
 
-      pow?.worker.terminate()
+      pow?.cancel()
       pow = makePow(ownedEvent, options.pow_difficulty)
 
       hashedEvent = await pow.result
@@ -285,7 +285,7 @@
     setTimeout(() => editor.commands.focus("end"))
 
     return () => {
-      pow?.worker.terminate()
+      pow?.cancel()
       editor.destroy()
     }
   })

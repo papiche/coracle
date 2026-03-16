@@ -1,5 +1,6 @@
 import {openDB, deleteDB} from "idb"
 import logger from "src/util/logger"
+import {runMigrations} from "src/engine/migrations"
 import type {IDBPDatabase} from "idb"
 import type {Unsubscriber} from "svelte/store"
 import {writable} from "svelte/store"
@@ -101,24 +102,13 @@ export const initStorage = async (
     throw new Error("Db initialized multiple times")
   }
 
+  // Build the keyPath map once so migrations.ts can reference it
+  const keyPaths = Object.fromEntries(Object.entries(adapters).map(([n, a]) => [n, a.keyPath]))
+
   try {
     db = await openDB(name, version, {
-      upgrade(db: IDBPDatabase) {
-        const names = Object.keys(adapters)
-
-        for (const name of db.objectStoreNames) {
-          if (!names.includes(name)) {
-            db.deleteObjectStore(name)
-          }
-        }
-
-        for (const [name, {keyPath}] of Object.entries(adapters)) {
-          try {
-            db.createObjectStore(name, {keyPath})
-          } catch (e) {
-            logger.warn(e)
-          }
-        }
+      upgrade(db: IDBPDatabase, oldVersion: number, newVersion: number) {
+        runMigrations(db, oldVersion, newVersion ?? version, keyPaths)
       },
     })
 

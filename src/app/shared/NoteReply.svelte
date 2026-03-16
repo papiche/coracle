@@ -117,7 +117,7 @@
     let hashedEvent = hash(ownedEvent)
 
     if (options.pow_difficulty) {
-      pow?.worker.terminate()
+      pow?.cancel()
       pow = makePow(ownedEvent, options.pow_difficulty)
 
       hashedEvent = await pow.result
@@ -157,7 +157,7 @@
   })
 
   onDestroy(() => {
-    pow?.worker.terminate()
+    pow?.cancel()
     editor.destroy()
   })
 </script>

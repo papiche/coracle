@@ -599,16 +599,32 @@ export const userFavoritedFeeds = derived(userFeedFavorites, $list =>
 type FeedSearchOption = {feed: PublishedFeed; score: number}
 
 export class FeedSearch extends SearchHelper<PublishedFeed, string> {
+  // Cache the Fuse instance across calls to avoid rebuilding the index on every keystroke.
+  private _fuse: Fuse<FeedSearchOption> | null = null
+  private _fuseOptions: FeedSearchOption[] = []
+
   getSearch = () => {
     const $feedFavoritesByAddress = feedFavoritesByAddress.get()
     const getScore = (feed: PublishedFeed) =>
       $feedFavoritesByAddress.get(getAddress(feed.event))?.length || 0
     const options: FeedSearchOption[] = this.options.map(feed => ({feed, score: getScore(feed)}))
-    const fuse = new Fuse(options, {
-      keys: ["feed.title", "feed.description"],
-      shouldSort: false,
-      includeScore: true,
-    })
+
+    // Rebuild Fuse only when the underlying data changes (different feeds or different scores)
+    const changed =
+      !this._fuse ||
+      options.length !== this._fuseOptions.length ||
+      options.some(
+        (o, i) => o.feed !== this._fuseOptions[i]?.feed || o.score !== this._fuseOptions[i]?.score,
+      )
+    if (changed) {
+      this._fuseOptions = options
+      this._fuse = new Fuse(options, {
+        keys: ["feed.title", "feed.description"],
+        shouldSort: false,
+        includeScore: true,
+      })
+    }
+    const fuse = this._fuse!
 
     return (term: string) => {
       if (!term) {
