@@ -153,18 +153,30 @@ router.extend("notes", (id, {relays = []} = {}) => {
     return Address.from(id, relays).toNaddr()
   }
 
-  return nip19.neventEncode({id, relays})
+  // Already a bech32 entity (nevent1… / note1…) → pass through unchanged to
+  // avoid double-encoding and "not a valid hex-digit" errors in nip19.
+  if (typeof id === "string" && /^(nevent1|note1)/.test(id)) {
+    return id
+  }
+
+  // Normalise to lowercase — nip19 requires strictly lowercase hex.
+  // Some NIP-71 (and other) relays may send uppercase or mixed-case hex ids.
+  const hexId = typeof id === "string" ? id.toLowerCase() : id
+  return nip19.neventEncode({id: hexId, relays})
 })
 
 router.extend("people", (pubkey, {relays = []} = {}) => {
+  // Normalise to lowercase — nip19 requires strictly lowercase hex.
+  const hexPubkey = typeof pubkey === "string" ? pubkey.toLowerCase() : pubkey
+
   if (relays.length < 3) {
     relays = relays.concat(
       RelayRouter.get()
-        .FromPubkeys([pubkey])
+        .FromPubkeys([hexPubkey])
         .limit(3 - relays.length)
         .getUrls(),
     )
   }
 
-  return nip19.nprofileEncode({pubkey, relays})
+  return nip19.nprofileEncode({pubkey: hexPubkey, relays})
 })

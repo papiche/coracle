@@ -92,27 +92,42 @@
 
   const authorDisplay = displayProfileByPubkey(event.pubkey)
 
-  // Validate that a string is a proper 64-char lowercase hex (sha256)
-  const isValidHex64 = (s: string) => /^[0-9a-f]{64}$/i.test(s)
+  // Validate that a string is a proper 64-char strictly-lowercase hex (sha256).
+  // NIP-19 (nip19.js) requires lowercase-only hex — no `i` flag here.
+  const isValidHex64 = (s: string) => /^[0-9a-f]{64}$/.test(s)
 
-  // Open note detail (with video player + like/reply/zap/share actions)
+  // Open note detail (with video player + like/reply/zap/share actions).
+  // Handles two id formats:
+  //   • raw hex (64 lowercase chars) → encode to nevent via nip19
+  //   • already a nevent1… bech32 string → use directly
   const openNote = () => {
-    if (!isValidHex64(event.id) || !isValidHex64(event.pubkey)) {
-      console.warn("VideoCard: invalid event id or pubkey, skipping navigation", event.id, event.pubkey)
-      return
-    }
     try {
+      const rawId = event.id ?? ""
+      // Case 1: id is already a bech32 nevent/note string → navigate directly
+      if (rawId.startsWith("nevent1") || rawId.startsWith("note1")) {
+        router.at("notes").of(rawId).open()
+        return
+      }
+
+      // Normalise to lowercase so nip19 doesn't choke on uppercase hex relays
+      const id = rawId.toLowerCase()
+      const pubkey = (event.pubkey ?? "").toLowerCase()
+
+      if (!isValidHex64(id) || !isValidHex64(pubkey)) {
+        console.warn("VideoCard: invalid event id or pubkey, skipping navigation", rawId, event.pubkey)
+        return
+      }
+
+      // Case 2: valid raw hex → encode to nevent
       const nevent = nip19.neventEncode({
-        id: event.id,
+        id,
         kind: event.kind,
-        author: event.pubkey,
+        author: pubkey,
         relays: Router.get().Event(event).limit(3).getUrls(),
       })
       router.at("notes").of(nevent).open()
     } catch (err) {
-      // Malformed event id/pubkey from some NIP-71 relays — open by raw id
-      console.warn("VideoCard: neventEncode failed", event.id, err)
-      router.at("notes").of(event.id).open()
+      console.warn("VideoCard: navigation failed", event.id, err)
     }
   }
 

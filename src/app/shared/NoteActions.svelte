@@ -68,17 +68,22 @@
   export let onReplyStart: () => void
   export let showHidden = false
 
+  // Normalise to lowercase — nip19 requires strictly lowercase hex.
+  // Some relays (notably NIP-71) send uppercase or mixed-case hex values.
+  const _safeId = (event.id ?? "").toLowerCase()
+  const _safePubkey = (event.pubkey ?? "").toLowerCase()
+
   let nevent: string
   try {
     nevent = nip19.neventEncode({
-      id: event.id,
+      id: _safeId,
       kind: event.kind,
-      author: event.pubkey,
+      author: _safePubkey,
       relays: Router.get().Event(event).limit(3).getUrls(),
     })
   } catch (_err) {
     // Malformed event id/pubkey (e.g. NIP-71 events from some relays)
-    nevent = event.id
+    nevent = _safeId
   }
 
   const pow = getPow(event)
@@ -147,7 +152,17 @@
       return 0
     }, handler.event.tags)
 
-    const entity = last(templateTag) === "note" ? nip19.noteEncode(event.id) : nevent
+    // noteEncode also requires lowercase hex — guard against uppercase ids.
+    let entity: string
+    if (last(templateTag) === "note") {
+      try {
+        entity = nip19.noteEncode(_safeId)
+      } catch {
+        entity = nevent
+      }
+    } else {
+      entity = nevent
+    }
 
     window.open(templateTag[1].replace("<bech32>", entity))
   }

@@ -9,9 +9,20 @@
   export let note
 
   const {name, picture, about} = parseJson(note.content)
-  const noteId = nip19.noteEncode(note.kind === 40 ? note.id : getTagValue("e", note.tags))
 
-  const goToChat = () => window.open(`https://chat.coracle.social/chat/${noteId}`)
+  // Normalise to lowercase — nip19 requires strictly lowercase hex.
+  const _rawId = (note.kind === 40 ? note.id : getTagValue("e", note.tags)) ?? ""
+  const _safeId = _rawId.toLowerCase()
+
+  let noteId: string
+  try {
+    noteId = nip19.noteEncode(_safeId)
+  } catch (_err) {
+    // Malformed id from some relays — fall back to raw id
+    noteId = _safeId
+  }
+
+  const goToChat = () => noteId && window.open(`https://chat.coracle.social/chat/${noteId}`)
 </script>
 
 <Card interactive on:click={goToChat}>
