@@ -561,6 +561,11 @@
   },
   "video": {
     "publish": "Publish",
-    "search": "Search videos..."
+    "search": "Search videos...",
+    "filterAll": "All",
+    "filterLocal": "Local",
+    "filterFilm": "Film",
+    "filterSerie": "Series",
+    "filterShort": "Short"
   }
 }

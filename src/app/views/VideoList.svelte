@@ -32,8 +32,38 @@
   let gridCtrl: ReturnType<typeof makeFeedController> | null = null
   let gridLoading = false
 
-  // Search/filter state
+  // Search/filter/sort state
   let searchQuery = ""
+  type SourceFilter = "all" | "local" | "youtube" | "film" | "serie" | "short"
+  let sourceFilter: SourceFilter = "all"
+  let sortOrder: "desc" | "asc" = "desc"
+
+  // Filter button definitions (typed constant so template `{#each}` infers the union correctly)
+  const sourceFilters: Array<{id: SourceFilter; label: string; icon: string}> = [
+    {id: "all",     label: "video.filterAll",   icon: "fa-globe"},
+    {id: "local",   label: "video.filterLocal", icon: "fa-broadcast-tower"},
+    {id: "youtube", label: "__youtube__",       icon: "fa-youtube"},
+    {id: "film",    label: "video.filterFilm",  icon: "fa-film"},
+    {id: "serie",   label: "video.filterSerie", icon: "fa-tv"},
+    {id: "short",   label: "video.filterShort", icon: "fa-bolt"},
+  ]
+
+  const filterLabel = (f: {id: SourceFilter; label: string}) =>
+    f.label === "__youtube__" ? "YouTube" : ($_(`${f.label}`) || f.label.split(".").pop() || f.label)
+
+  /** Detect the source type of a video event (same logic as VideoCard) */
+  const getSourceType = (e: TrustedEvent): string => {
+    const src = e.tags.find(t => t[0] === "i" && t[1]?.startsWith("source:"))
+    if (src) return src[1].replace("source:", "")
+    if (e.tags.some(t => t[0] === "t" && t[1] === "youtube")) return "youtube"
+    if (e.tags.some(t => t[0] === "t" && t[1] === "film")) return "film"
+    if (e.tags.some(t => t[0] === "t" && t[1] === "serie")) return "serie"
+    if (e.tags.some(t => t[0] === "t" && ["webcam", "local", "nostr"].includes(t[1]))) return "local"
+    return "local" // default: locally-published
+  }
+
+  const getDuration = (e: TrustedEvent): number =>
+    parseInt(e.tags.find(t => t[0] === "duration")?.[1] || "0")
 
   const setActiveTab = tab => {
     activeTab = tab
@@ -98,14 +128,37 @@
     gridLoading = false
   }
 
-  $: filteredEvents = searchQuery
-    ? gridEvents.filter(e => {
-        const q = searchQuery.toLowerCase()
-        const title = e.tags.find(t => t[0] === "title")?.[1] || ""
-        const content = e.content || ""
-        return title.toLowerCase().includes(q) || content.toLowerCase().includes(q)
+  $: filteredEvents = (() => {
+    let events = [...gridEvents]
+
+    // Text search
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      events = events.filter(e => {
+        const title = (e.tags.find(t => t[0] === "title")?.[1] || "").toLowerCase()
+        const content = (e.content || "").toLowerCase()
+        return title.includes(q) || content.includes(q)
       })
-    : gridEvents
+    }
+
+    // Source filter
+    if (sourceFilter !== "all") {
+      events = events.filter(e => {
+        if (sourceFilter === "short") {
+          const dur = getDuration(e)
+          return e.kind === 22 || (dur > 0 && dur <= 60)
+        }
+        return getSourceType(e) === sourceFilter
+      })
+    }
+
+    // Sort order (grid events arrive desc by default from the relay)
+    if (sortOrder === "asc") {
+      events = [...events].sort((a, b) => a.created_at - b.created_at)
+    }
+
+    return events
+  })()
 
   // Reload when feed changes (tab switch) or when switching to grid mode
   $: if (viewMode === "grid" && feed) {
@@ -163,7 +216,7 @@
     <Tabs {tabs} {activeTab} {setActiveTab} />
   {/if}
   {#if viewMode === "grid"}
-    <!-- Search bar like youtube.html -->
+    <!-- Search bar -->
     <div class="flex items-center gap-2 rounded-lg bg-neutral-900 px-3 py-2">
       <i class="fa fa-search text-neutral-500" />
       <input
@@ -176,6 +229,40 @@
           <i class="fa fa-times" />
         </button>
       {/if}
+    </div>
+
+    <!-- Source & duration filters (inspired by nostr.html tube-filters + youtube.html) -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Source filter chips -->
+      {#each sourceFilters as f}
+        <button
+          class="flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-all"
+          class:border-accent={sourceFilter === f.id}
+          class:bg-accent={sourceFilter === f.id}
+          class:text-white={sourceFilter === f.id}
+          class:border-neutral-700={sourceFilter !== f.id}
+          class:bg-neutral-800={sourceFilter !== f.id}
+          class:text-neutral-400={sourceFilter !== f.id}
+          on:click={() => (sourceFilter = f.id)}>
+          <i class="fa {f.icon}" />
+          {filterLabel(f)}
+        </button>
+      {/each}
+
+      <!-- Spacer -->
+      <div class="flex-1" />
+
+      <!-- Sort order -->
+      <button
+        class="flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-all"
+        class:border-accent={sortOrder === "desc"}
+        class:bg-neutral-800={true}
+        class:text-neutral-300={true}
+        title="Trier par date"
+        on:click={() => (sortOrder = sortOrder === "desc" ? "asc" : "desc")}>
+        <i class="fa fa-clock" />
+        {sortOrder === "desc" ? "Récent ↓" : "Ancien ↑"}
+      </button>
     </div>
   {/if}
   {#key `${activeTab}-${viewMode}`}

@@ -561,6 +561,11 @@
   },
   "video": {
     "publish": "Publier",
-    "search": "Rechercher une vidéo..."
+    "search": "Rechercher une vidéo...",
+    "filterAll": "Tous",
+    "filterLocal": "Local",
+    "filterFilm": "Film",
+    "filterSerie": "Série",
+    "filterShort": "Court"
   }
 }
