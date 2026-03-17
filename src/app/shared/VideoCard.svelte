@@ -61,8 +61,15 @@
 
   const authorDisplay = displayProfileByPubkey(event.pubkey)
 
+  // Validate that a string is a proper 64-char lowercase hex (sha256)
+  const isValidHex64 = (s: string) => /^[0-9a-f]{64}$/i.test(s)
+
   // Open note detail (with video player + like/reply/zap/share actions)
   const openNote = () => {
+    if (!isValidHex64(event.id) || !isValidHex64(event.pubkey)) {
+      console.warn("VideoCard: invalid event id or pubkey, skipping navigation", event.id, event.pubkey)
+      return
+    }
     try {
       const nevent = nip19.neventEncode({
         id: event.id,
