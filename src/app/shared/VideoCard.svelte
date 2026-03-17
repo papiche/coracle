@@ -6,6 +6,7 @@
   import {displayProfileByPubkey} from "@welshman/app"
   import {imgproxy} from "src/engine"
   import {router} from "src/app/util/router"
+  import {resolveIpfsUrl} from "src/util/ipfs"
 
   export let event: TrustedEvent
 
@@ -15,32 +16,6 @@
       if (val) return val
     }
     return ""
-  }
-
-  /**
-   * Dérive la gateway IPFS depuis l'URL courante (même logique que youtube.enhancements.js).
-   * Appelé une seule fois au moment de l'évaluation du composant.
-   */
-  const getIpfsGateway = (): string => {
-    if (typeof window === "undefined") return "https://ipfs.copylaradio.com"
-    const {hostname, protocol} = window.location
-    const proto = protocol.replace(":", "")
-    if (hostname === "127.0.0.1" || hostname === "localhost") return "http://127.0.0.1:8080"
-    if (hostname.startsWith("ipfs.")) return `${proto}://${hostname}`
-    if (hostname.startsWith("u.")) return `${proto}://ipfs.${hostname.slice(2)}`
-    return "https://ipfs.copylaradio.com"
-  }
-
-  /** Convertit un CID nu ou une ipfs:// URI en URL complète via la gateway. */
-  const resolveIpfsUrl = (url: string): string => {
-    if (!url) return url
-    if (url.startsWith("http://") || url.startsWith("https://")) return url
-    const gw = getIpfsGateway()
-    if (url.startsWith("ipfs://")) return `${gw}/ipfs/${url.slice(7)}`
-    if (url.startsWith("/ipfs/")) return `${gw}${url}`
-    // CID base58 (Qm…, 46 chars) ou base32 (bafy…)
-    if (/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{50,})/.test(url)) return `${gw}/ipfs/${url}`
-    return url
   }
 
   const title = findTag(["title"]) || "Video"
