@@ -60,7 +60,9 @@
     {#if title}
       <div class="flex flex-col bg-white px-4 py-2 text-black" style="overflow-wrap: anywhere">
         <strong>{title}</strong>
-        <small>{ellipsize(description, 140)}</small>
+        {#if description}
+          <small>{ellipsize(description, 140)}</small>
+        {/if}
       </div>
     {/if}
   {:catch}
