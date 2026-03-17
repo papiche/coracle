@@ -6,7 +6,8 @@ import type {UploadTask, FileAttributes} from "@welshman/editor"
 import {first} from "@welshman/lib"
 import {getTagValue, getListTags} from "@welshman/util"
 import {Router} from "@welshman/router"
-import {profileSearch, userBlossomServerList} from "@welshman/app"
+import {pubkey, profileSearch, userBlossomServerList} from "@welshman/app"
+import {npubEncode} from "nostr-tools/nip19"
 import {Editor, MentionSuggestion, WelshmanExtension, editorProps} from "@welshman/editor"
 import {ensureProto} from "src/util/misc"
 import {getVerifiedUPlanet} from "src/util/uplanet-detect"
@@ -67,6 +68,17 @@ export const makeEditor = ({
                   try {
                     const formData = new FormData()
                     formData.append("file", attrs.file)
+                    // Envoyer le npub de l'utilisateur courant pour que le serveur
+                    // puisse nommer le fichier et l'associer à son profil
+                    const currentPubkey = get(pubkey)
+                    if (currentPubkey) {
+                      try {
+                        formData.append("npub", npubEncode(currentPubkey))
+                      } catch {
+                        // pubkey invalide — on continue sans npub
+                      }
+                    }
+                    formData.append("type", "media")
                     const res = await fetch(up.uploadUrl, {method: "POST", body: formData})
                     if (res.ok) {
                       const data = await res.json()
