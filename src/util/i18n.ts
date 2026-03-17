@@ -3,9 +3,10 @@ import {get} from "svelte/store"
 import {locale} from "src/partials/state"
 import en from "src/locales/en.json"
 
-// English loaded synchronously (fallback), French lazy-loaded
+// English loaded synchronously (fallback), other locales lazy-loaded
 register("en", () => Promise.resolve(en))
 register("fr", () => import("src/locales/fr.json"))
+register("es", () => import("src/locales/es.json"))
 
 // Initialize i18n
 init({
