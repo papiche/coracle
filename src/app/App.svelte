@@ -39,6 +39,7 @@
   import GroupList from "src/app/views/GroupList.svelte"
   import VideoList from "src/app/views/VideoList.svelte"
   import BlogList from "src/app/views/BlogList.svelte"
+  import BlogCreate from "src/app/views/BlogCreate.svelte"
   import Help from "src/app/views/Help.svelte"
   import Home from "src/app/views/Home.svelte"
   import InviteAccept from "src/app/views/InviteAccept.svelte"
@@ -128,6 +129,7 @@
   router.register("/groups", GroupList)
   router.register("/video", VideoList)
   router.register("/blog", BlogList)
+  router.register("/blog/create", BlogCreate, {requireSigner: true})
 
   router.register("/help/:topic", Help)
 

@@ -567,5 +567,32 @@
     "filterFilm": "Film",
     "filterSerie": "Série",
     "filterShort": "Court"
+  },
+  "blog": {
+    "write": "Écrire",
+    "newArticle": "Nouvel article",
+    "editArticle": "Modifier l'article",
+    "title": "Titre",
+    "titlePlaceholder": "Mon article incroyable…",
+    "titleRequired": "Le titre est requis",
+    "summary": "Résumé",
+    "summaryPlaceholder": "Une phrase de présentation…",
+    "coverImage": "Image de couverture (URL)",
+    "tags": "Tags (séparés par virgule)",
+    "contentPlaceholder": "# Mon article\n\nÉcrivez en Markdown…",
+    "contentRequired": "Le contenu est requis",
+    "preview": "Aperçu",
+    "edit": "Éditer",
+    "previewEmpty": "Aucun contenu à afficher…",
+    "publish": "Publier",
+    "publishing": "Publication…",
+    "published": "Article publié !",
+    "publishFailed": "Échec de la publication",
+    "markdownHint": "Markdown : **gras**, _italique_, # titre, [lien](url), ![img](url)",
+    "search": "Rechercher un article…",
+    "myArticle": "Mon article",
+    "myArticles": "Mes articles",
+    "noMyArticles": "Vous n'avez pas encore écrit d'articles.",
+    "writeFirst": "Écrire mon premier article"
   }
 }

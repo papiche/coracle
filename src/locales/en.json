@@ -567,5 +567,32 @@
     "filterFilm": "Film",
     "filterSerie": "Series",
     "filterShort": "Short"
+  },
+  "blog": {
+    "write": "Write",
+    "newArticle": "New Article",
+    "editArticle": "Edit Article",
+    "title": "Title",
+    "titlePlaceholder": "My amazing article…",
+    "titleRequired": "Title is required",
+    "summary": "Summary",
+    "summaryPlaceholder": "One-line description…",
+    "coverImage": "Cover Image (URL)",
+    "tags": "Tags (comma-separated)",
+    "contentPlaceholder": "# My article\n\nWrite in Markdown…",
+    "contentRequired": "Content is required",
+    "preview": "Preview",
+    "edit": "Edit",
+    "previewEmpty": "No content to display…",
+    "publish": "Publish",
+    "publishing": "Publishing…",
+    "published": "Article published!",
+    "publishFailed": "Failed to publish",
+    "markdownHint": "Markdown supported: **bold**, _italic_, # heading, [link](url), ![img](url)",
+    "search": "Search articles…",
+    "myArticle": "My article",
+    "myArticles": "My articles",
+    "noMyArticles": "You haven't written any articles yet.",
+    "writeFirst": "Write my first article"
   }
 }
