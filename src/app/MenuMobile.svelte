@@ -153,10 +153,6 @@
         <i class="fa fa-sliders" />
         {$_("menu.appSettings")}
       </MenuMobileItem>
-      <MenuMobileItem disabled={!$signer} href="/lists" on:click={closeMenu}>
-        <i class="fa fa-list" />
-        {$_("menu.lists")}
-      </MenuMobileItem>
     </div>
   </SliderMenu>
 {/if}

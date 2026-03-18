@@ -74,6 +74,7 @@
     "authenticateRelaysInfo": "Permite a {appName} autenticarse automáticamente en relés con control de acceso.",
     "blossomUrls": "URLs de proveedores Blossom",
     "blossomInfo": "Introduce una o más URLs de servidores de medios nostr compatibles con Blossom.",
+    "blossomUplanet": "Servidor de medios UPlanet detectado:",
     "dufflepudUrl": "URL Dufflepud",
     "dufflepudInfo": "Introduce una URL personalizada para la aplicación auxiliar de {appName}. Dufflepud se usa para alojar imágenes y cargar previsualizaciones de enlaces.",
     "sourceCode": "aquí",
@@ -264,7 +265,12 @@
     "balance": "Saldo:",
     "sats": "sats",
     "disconnectWallet": "Desconectar cartera",
-    "noWalletConnected": "No hay cartera conectada"
+    "noWalletConnected": "No hay cartera conectada",
+    "zenBalance": "Saldo ẐEN",
+    "zenDesc": "Los tokens MULTIPASS son créditos de uso (me gusta, acceso a relés, IA). Tu saldo se deriva de tu cuenta Ğ1.",
+    "zenNoMultipass": "No se detectó MULTIPASS. Añade tu g1pub o dirección Duniter v2s (g1v2) a tu perfil para activar los tokens MULTIPASS ẐEN.",
+    "editProfile": "Editar perfil",
+    "zenFormula": "Fórmula ẐEN: (saldo Ğ1 − 1) × 10 = ẐEN. Dar me gusta a una nota cuesta 1 ẐEN."
   },
   "walletConnect": {
     "title": "Conectar una cartera",

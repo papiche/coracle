@@ -13,12 +13,14 @@
   import Toggle from "src/partials/Toggle.svelte"
   import Input from "src/partials/Input.svelte"
   import Button from "src/partials/Button.svelte"
-  import Link from "src/partials/Link.svelte"
   import Heading from "src/partials/Heading.svelte"
-  import {fuzzy, pluralize} from "src/util/misc"
-  import WorkEstimate from "src/partials/WorkEstimate.svelte"
+  import {fuzzy} from "src/util/misc"
   import SearchSelect from "src/partials/SearchSelect.svelte"
   import {env, userSettings, publishSettings} from "src/engine"
+  import {detectUPlanetServices} from "src/util/uplanet-detect"
+
+  const uplanet = detectUPlanetServices()
+  const uplanetBlossomUrl = uplanet?.apiUrl || "https://u.copylaradio.com"
 
   const initialBlossomServers = getTagValues("server", getListTags($userBlossomServerList))
 
@@ -56,47 +58,13 @@
   <div class="flex w-full flex-col gap-8">
     <Field label={$_("settings.language")}>
       <select
-        class="bg-input rounded border border-solid border-tinted-700 px-4 py-2"
+        class="rounded border border-solid border-tinted-700 bg-tinted-700 px-4 py-2 text-tinted-200"
         bind:value={$locale}>
         <option value="en">English</option>
         <option value="fr">Français</option>
+        <option value="es">Español</option>
       </select>
       <p slot="info">{$_("settings.languageInfo")}</p>
-    </Field>
-    <Field label={$_("settings.defaultZapAmount")}>
-      <Input bind:value={values.default_zap}>
-        <i slot="before" class="fa fa-bolt" />
-      </Input>
-      <p slot="info">{$_("settings.defaultZapInfo")}</p>
-    </Field>
-    <Field>
-      <div slot="label" class="flex justify-between">
-        <strong>{$_("settings.platformZapSplit")}</strong>
-        <div>{Math.round(values.platform_zap_split * 100)}%</div>
-      </div>
-      <Input type="range" step="0.01" bind:value={values.platform_zap_split} min={0} max={0.5} />
-      <p slot="info">
-        {$_("settings.platformZapInfo", {values: {appName}})}
-      </p>
-    </Field>
-    <Field>
-      <div slot="label" class="flex justify-between">
-        <strong>{$_("settings.sendDelay")}</strong>
-        <div>{values.send_delay / 1000} {pluralize(values.send_delay / 1000, "second")}</div>
-      </div>
-      <Input type="range" step="1000" bind:value={values.send_delay} min={0} max={15_000} />
-      <p slot="info">{$_("settings.sendDelayInfo")}</p>
-    </Field>
-    <Field>
-      <div slot="label" class="flex justify-between">
-        <strong>{$_("settings.proofOfWork")}</strong>
-        <div>
-          {$_("settings.difficulty", {values: {n: values.pow_difficulty}})} (<WorkEstimate
-            difficulty={values.pow_difficulty} />)
-        </div>
-      </div>
-      <Input type="range" step="1" bind:value={values.pow_difficulty} min={0} max={32} />
-      <p slot="info">{$_("settings.proofOfWorkInfo")}</p>
     </Field>
     <Field>
       <div slot="label" class="flex justify-between">
@@ -115,7 +83,14 @@
       </p>
     </FieldInline>
     <Field label={$_("settings.blossomUrls")}>
-      <p slot="info">{$_("settings.blossomInfo")}</p>
+      <div slot="info" class="flex flex-col gap-1">
+        <p>{$_("settings.blossomInfo")}</p>
+        <p class="flex items-center gap-2 text-xs">
+          <i class="fa fa-circle-nodes text-accent" />
+          <span class="text-tinted-400">{$_("settings.blossomUplanet")}</span>
+          <code class="rounded bg-tinted-700 px-1 text-accent">{uplanetBlossomUrl}</code>
+        </p>
+      </div>
       <SearchSelect
         multiple
         search={searchBlossomProviders}
@@ -126,36 +101,6 @@
         </div>
       </SearchSelect>
     </Field>
-    <Field label={$_("settings.dufflepudUrl")}>
-      <Input bind:value={values.dufflepud_url}>
-        <i slot="before" class="fa-solid fa-server" />
-      </Input>
-      <p slot="info">
-        {$_("settings.dufflepudInfo", {values: {appName}})} You can find the source code <Link
-          class="underline"
-          external
-          href="https://github.com/coracle-social/dufflepud">{$_("settings.sourceCode")}</Link
-        >.
-      </p>
-    </Field>
-    <Field label={$_("settings.imgproxyUrl")}>
-      <Input bind:value={values.imgproxy_url}>
-        <i slot="before" class="fa-solid fa-image" />
-      </Input>
-      <p slot="info">
-        {$_("settings.imgproxyInfo")} You can set up your own proxy <Link
-          class="underline"
-          external
-          href="https://imgproxy.net/">{$_("settings.imgproxySetup")}</Link
-        >.
-      </p>
-    </Field>
-    <FieldInline label={$_("settings.reportAnalytics")}>
-      <Toggle bind:value={values.report_analytics} />
-      <p slot="info">
-        {$_("settings.reportAnalyticsInfo")}
-      </p>
-    </FieldInline>
     <FieldInline label={$_("settings.clientFingerprinting")}>
       <Toggle bind:value={values.enable_client_tag} />
       <p slot="info">

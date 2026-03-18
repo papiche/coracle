@@ -74,7 +74,6 @@
   })
 
   $: isFeedPage = Boolean($page?.path.match(/^\/(notes)?$/))
-  $: isListPage = Boolean($page?.path.match(/^\/(lists)?$/))
   $: userDisplay = deriveProfileDisplay($pubkey)
 </script>
 
@@ -86,7 +85,7 @@
         ? import.meta.env.VITE_APP_WORDMARK_DARK
         : import.meta.env.VITE_APP_WORDMARK_LIGHT} />
   </Link>
-  <MenuDesktopItem path="/notes" isActive={isFeedPage || isListPage}
+  <MenuDesktopItem path="/notes" isActive={isFeedPage}
     >{$_("menu.feeds")}</MenuDesktopItem>
   <MenuDesktopItem
     path="/settings/relays"
@@ -125,7 +124,6 @@
   {#if isUPlanet}
     <MenuDesktopItem path="/blog" disabled={!$signer}>{$_("menu.blog")}</MenuDesktopItem>
   {/if}
-  <MenuDesktopItem modal path="/lists" disabled={!$signer}>{$_("menu.lists")}</MenuDesktopItem>
   <FlexColumn small class="absolute bottom-0 w-72">
     <Button
       class="staatliches px-8 text-start text-tinted-400 hover:text-tinted-100"

@@ -74,6 +74,7 @@
     "authenticateRelaysInfo": "Permet a {appName} de s'authentifier automatiquement aupres des relais avec controle d'acces.",
     "blossomUrls": "URLs des fournisseurs Blossom",
     "blossomInfo": "Entrez une ou plusieurs URLs pour les serveurs media nostr compatibles Blossom.",
+    "blossomUplanet": "Serveur media UPlanet detecte :",
     "dufflepudUrl": "URL Dufflepud",
     "dufflepudInfo": "Entrez une URL personnalisee pour l'application d'aide de {appName}. Dufflepud est utilise pour heberger les images et charger les aperçus de liens.",
     "sourceCode": "ici",
@@ -264,7 +265,12 @@
     "balance": "Solde :",
     "sats": "sats",
     "disconnectWallet": "Deconnecter le portefeuille",
-    "noWalletConnected": "Aucun portefeuille connecte"
+    "noWalletConnected": "Aucun portefeuille connecte",
+    "zenBalance": "Solde ẐEN",
+    "zenDesc": "Les tokens MULTIPASS sont des credits d'usage (likes, acces relais, IA). Votre solde est derive de votre compte Ğ1.",
+    "zenNoMultipass": "Aucun MULTIPASS detecte. Ajoutez votre g1pub ou adresse Duniter v2s (g1v2) a votre profil pour activer les tokens MULTIPASS ẐEN.",
+    "editProfile": "Modifier le profil",
+    "zenFormula": "Formule ẐEN : (solde Ğ1 − 1) × 10 = ẐEN. Liker une note coute 1 ẐEN."
   },
   "walletConnect": {
     "title": "Connecter un portefeuille",

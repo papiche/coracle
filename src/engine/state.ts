@@ -248,12 +248,12 @@ export const defaultSettings = {
   pow_difficulty: 0,
   muted_words: [] as string[], // Deprecated
   hide_sensitive: true,
-  report_analytics: true,
+  report_analytics: false, // disabled — analytics go to coracle.social
   min_wot_score: 0,
   min_pow_difficulty: 0,
   enable_client_tag: false,
   auto_authenticate2: true,
-  note_actions: ["zaps", "replies", "reactions", "recommended_apps"] as string[],
+  note_actions: ["replies", "reactions", "recommended_apps"] as string[],
   upload_type: "blossom" as "blossom" | "nip96",
   imgproxy_url: "",
   dufflepud_url: env.DUFFLEPUD_URL,

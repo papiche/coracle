@@ -31,7 +31,6 @@ import {
   loadFeedsAndLists,
   listenForNotifications,
   userFeedFavorites,
-  getSetting,
   setChecked,
 } from "src/engine"
 
@@ -41,13 +40,9 @@ export const menuIsOpen = writable(false)
 
 export const searchTerm = writable("")
 
-export const logUsage = async (path: string) => {
-  if (getSetting("report_analytics")) {
-    const {location, plausible} = window as any
-    const pathname = path.replace(/(npub|nprofile|note|nevent|naddr)1[^\/]+/g, (_, m) => `<${m}>`)
-
-    plausible("pageview", {u: location.origin + pathname})
-  }
+// Analytics disabled for this fork (CoracleẐ / UPlanet)
+export const logUsage = async (_path: string) => {
+  // no-op: Plausible analytics removed — data was going to coracle.social
 }
 
 export const slowConnections = writable([])

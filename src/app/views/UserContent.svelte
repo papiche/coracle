@@ -11,7 +11,6 @@
   import FieldInline from "src/partials/FieldInline.svelte"
   import Toggle from "src/partials/Toggle.svelte"
   import SelectButton from "src/partials/SelectButton.svelte"
-  import WorkEstimate from "src/partials/WorkEstimate.svelte"
   import Button from "src/partials/Button.svelte"
   import SearchSelect from "src/partials/SearchSelect.svelte"
   import Heading from "src/partials/Heading.svelte"
@@ -20,7 +19,7 @@
 
   const values = {...$userSettings}
 
-  const noteActionOptions = ["zaps", "replies", "reactions", "recommended_apps"]
+  const noteActionOptions = ["replies", "reactions", "recommended_apps"]
 
   const setMutesDirty = () => {
     mutesDirty = true
@@ -98,19 +97,6 @@
       <Input type="range" bind:value={values.min_wot_score} min={-10} max={10} />
       <p slot="info">
         {$_("content.minWotScoreInfo")}
-      </p>
-    </Field>
-    <Field>
-      <div slot="label" class="flex justify-between">
-        <strong>{$_("content.minPow")}</strong>
-        <div>
-          difficulty {values.min_pow_difficulty} (<WorkEstimate
-            difficulty={values.min_pow_difficulty} />)
-        </div>
-      </div>
-      <Input type="range" bind:value={values.min_pow_difficulty} min={0} max={32} />
-      <p slot="info">
-        {$_("content.minPowInfo")}
       </p>
     </Field>
     <p>{$_("content.mutes")}</p>

@@ -74,6 +74,7 @@
     "authenticateRelaysInfo": "Allows {appName} to authenticate with relays that have access controls automatically.",
     "blossomUrls": "Blossom Provider URLs",
     "blossomInfo": "Enter one or more urls for blossom compatible nostr media servers.",
+    "blossomUplanet": "UPlanet media server detected:",
     "dufflepudUrl": "Dufflepud URL",
     "dufflepudInfo": "Enter a custom url for {appName}'s helper application. Dufflepud is used for hosting images and loading link previews.",
     "sourceCode": "here",
@@ -264,7 +265,12 @@
     "balance": "Balance:",
     "sats": "sats",
     "disconnectWallet": "Disconnect Wallet",
-    "noWalletConnected": "No wallet connected"
+    "noWalletConnected": "No wallet connected",
+    "zenBalance": "ẐEN Balance",
+    "zenDesc": "MULTIPASS tokens are usage credits (likes, relay access, AI). Your balance is derived from your Ğ1 account.",
+    "zenNoMultipass": "No MULTIPASS detected. Add your g1pub or Duniter v2s address (g1v2) to your profile to activate MULTIPASS ẐEN tokens.",
+    "editProfile": "Edit Profile",
+    "zenFormula": "ẐEN formula: (Ğ1 balance − 1) × 10 = ẐEN. Liking a post costs 1 ẐEN."
   },
   "walletConnect": {
     "title": "Connect a Wallet",
