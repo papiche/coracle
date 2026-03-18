@@ -31,6 +31,7 @@
     "groups": "Grupos",
     "video": "Vídeo",
     "blog": "Blog",
+    "vocaux": "Vocaux",
     "lists": "Listas",
     "settings": "Configuración",
     "about": "Acerca de",
@@ -573,6 +574,11 @@
     "filterFilm": "Película",
     "filterSerie": "Serie",
     "filterShort": "Corto"
+  },
+  "vocaux": {
+    "title": "Vocaux — Mensajes de voz",
+    "noUplanet": "UPlanet no detectado",
+    "noUplanetDesc": "Esta función requiere una instalación local de UPlanet (u.dominio o localhost:54321)."
   },
   "blog": {
     "write": "Escribir",

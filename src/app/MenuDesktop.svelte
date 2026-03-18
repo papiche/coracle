@@ -123,6 +123,7 @@
   <MenuDesktopItem path="/video" disabled={!$signer}>{$_("menu.video")}</MenuDesktopItem>
   {#if isUPlanet}
     <MenuDesktopItem path="/blog" disabled={!$signer}>{$_("menu.blog")}</MenuDesktopItem>
+    <MenuDesktopItem path="/vocaux" disabled={!$signer}>{$_("menu.vocaux")}</MenuDesktopItem>
   {/if}
   <FlexColumn small class="absolute bottom-0 w-72">
     <Button
