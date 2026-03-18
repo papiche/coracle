@@ -4,23 +4,52 @@
   import {detectUPlanetServices} from "src/util/uplanet-detect"
 
   const uplanet = detectUPlanetServices()
-  // UPassport serves vocals.html at /vocals on the u. API server
-  const vocalsUrl = uplanet ? `${uplanet.apiUrl}/vocals` : null
+  // UPassport serves vocals-read.html at /vocals-read on the u. API server
+  const vocalsUrl = uplanet ? `${uplanet.apiUrl}/vocals-read` : null
 
   let iframeEl: HTMLIFrameElement
 
   /**
-   * Bridge NOSTR signing requests from the vocals.html iframe to the
-   * browser's window.nostr extension.
-   * vocals.html already includes a postMessage proxy (see the NOSTR Extension
-   * Proxy block at the top of the file) that sends:
-   *   { type: 'nostr-request', requestId, method, params }
-   * and expects:
-   *   { type: 'nostr-response', requestId, success, data | error }
+   * When the iframe loads, proactively send the current NOSTR public key so
+   * vocals-read does not need to read window.parent.userPubkey (which would
+   * throw a DOMException in a cross-origin context).
    */
-  const handleMessage = async (event: MessageEvent) => {
-    if (!event.data || event.data.type !== "nostr-request") return
+  const handleLoad = async () => {
     if (!iframeEl?.contentWindow) return
+    const nostr = (window as any).nostr
+    if (!nostr) return
+    try {
+      const pubkey = await nostr.getPublicKey()
+      iframeEl.contentWindow.postMessage(
+        {type: "nostr-state", userPubkey: pubkey, isNostrConnected: true, nostrRelay: null},
+        "*",
+      )
+    } catch (_) {
+      // Extension not available or user denied – ignore
+    }
+  }
+
+  const handleMessage = async (event: MessageEvent) => {
+    if (!event.data) return
+    if (!iframeEl?.contentWindow) return
+
+    // vocals-read requests the current NOSTR state (cross-origin safe path)
+    if (event.data.type === "nostr-state-request") {
+      const nostr = (window as any).nostr
+      if (!nostr) return
+      try {
+        const pubkey = await nostr.getPublicKey()
+        iframeEl.contentWindow.postMessage(
+          {type: "nostr-state", userPubkey: pubkey, isNostrConnected: true, nostrRelay: null},
+          "*",
+        )
+      } catch (_) {
+        // ignore
+      }
+      return
+    }
+
+    if (event.data.type !== "nostr-request") return
 
     const {requestId, method, params} = event.data
     const nostr = (window as any).nostr
@@ -90,7 +119,8 @@
     title={$_("vocaux.title")}
     class="h-full w-full border-0"
     style="height: calc(100vh - 60px);"
-    allow="microphone; camera; geolocation" />
+    allow="microphone; camera; geolocation"
+    on:load={handleLoad} />
 {:else}
   <div class="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
     <i class="fa fa-microphone-slash fa-3x text-tinted-500" />
