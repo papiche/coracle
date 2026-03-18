@@ -101,6 +101,8 @@
     "useRemoteSigner": "Use Remote Signer",
     "browseSignerApps": "Browse Signer Apps",
     "needAccount": "Need an account?",
+    "noExtension": "No NOSTR extension detected. Install nos2x or Alby to sign in, or create a new UPlanet account:",
+    "createAccount": "Create UPlanet account",
     "registerInstead": "Register instead",
     "use": "Use {name}",
     "bunkerTitle": "Login with Signer",

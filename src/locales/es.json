@@ -101,6 +101,8 @@
     "useRemoteSigner": "Usar un firmante remoto",
     "browseSignerApps": "Explorar apps de firma",
     "needAccount": "¿Necesitas una cuenta?",
+    "noExtension": "No se detectó ninguna extensión NOSTR. Instala nos2x o Alby para iniciar sesión, o crea una cuenta UPlanet:",
+    "createAccount": "Crear cuenta UPlanet",
     "registerInstead": "Registrarse",
     "use": "Usar {name}",
     "bunkerTitle": "Iniciar sesión con un firmante",

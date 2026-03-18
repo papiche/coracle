@@ -101,6 +101,8 @@
     "useRemoteSigner": "Utiliser un signataire distant",
     "browseSignerApps": "Parcourir les applications de signature",
     "needAccount": "Besoin d'un compte ?",
+    "noExtension": "Aucune extension NOSTR detectee. Installez nos2x ou Alby pour vous connecter, ou creez un compte UPlanet :",
+    "createAccount": "Creer un compte UPlanet",
     "registerInstead": "S'inscrire",
     "use": "Utiliser {name}",
     "bunkerTitle": "Connexion avec un signataire",

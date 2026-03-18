@@ -9,7 +9,7 @@
   import Button from "src/partials/Button.svelte"
   import FlexColumn from "src/partials/FlexColumn.svelte"
   import Heading from "src/partials/Heading.svelte"
-  import {router} from "src/app/util/router"
+  import {getIpfsGateway} from "src/util/ipfs"
   import {boot} from "src/app/state"
 
   // Define the interface for AppInfo
@@ -19,27 +19,22 @@
     iconUrl?: string
   }
 
-  const signUp = () => router.at("signup").replaceModal()
-
-  const useBunker = () => router.at("login/bunker").pushModal()
-
   const useExtension = async () => {
     const signer = new Nip07Signer()
     const pubkey = await signer.getPubkey()
-
     loginWithNip07(pubkey)
     boot()
   }
 
-  console.log("=========== hi")
   const useSigner = async (app: AppInfo) => {
-    console.log("=======", JSON.stringify(app))
     const signer = new Nip55Signer(app.packageName)
     const pubkey = await signer.getPubkey()
-
     loginWithNip55(pubkey, app.packageName)
     boot()
   }
+
+  // Keygen link: served via the UPlanet IPFS gateway
+  const keygenUrl = `${getIpfsGateway()}/ipns/copylaradio.com/keygen-2.html`
 
   let signerApps: AppInfo[] = []
 
@@ -64,29 +59,34 @@
     </div>
     <div class="relative flex flex-col gap-4">
       {#if getNip07()}
+        <!-- Extension NIP-07 (nos2x, Alby…) — méthode recommandée -->
         <Button class="btn btn-tall btn-accent" on:click={useExtension}>
           <i class="fa fa-puzzle-piece" />
           {$_("login.useExtension")}
         </Button>
+      {:else}
+        <!-- Aucune extension détectée: guider l'utilisateur -->
+        <div class="rounded border border-tinted-600 p-4 text-center text-sm text-tinted-400">
+          <i class="fa fa-puzzle-piece mb-2 text-2xl text-accent" />
+          <p class="mb-2">{$_("login.noExtension")}</p>
+          <Link external class="btn btn-accent btn-sm" href={keygenUrl}>
+            <i class="fa fa-key" />
+            {$_("login.createAccount")}
+          </Link>
+        </div>
       {/if}
+      <!-- NIP-55 signers (Android mobile apps) -->
       {#each signerApps as app}
         <Button class="btn btn-tall" on:click={() => useSigner(app)}>
           <img src={app.iconUrl} alt={app.name} width="20" height="20" />
           {$_("login.use", {values: {name: app.name}})}
         </Button>
       {/each}
-      <Button class="btn btn-tall" on:click={useBunker}>
-        <i class="fa fa-box" />
-        {$_("login.useRemoteSigner")}
-      </Button>
-      <Link external class="btn btn-tall btn-low" href="https://nostrapps.com/#signers">
-        <i class="fa fa-compass" />
-        {$_("login.browseSignerApps")}
-      </Link>
     </div>
-    <span class="text-center">
+    <!-- Signup → UPlanet keygen -->
+    <span class="text-center text-sm">
       {$_("login.needAccount")}
-      <Button class="underline" on:click={signUp}>{$_("login.registerInstead")}</Button>
+      <Link external class="underline" href={keygenUrl}>{$_("login.registerInstead")}</Link>
     </span>
   </FlexColumn>
 </div>
