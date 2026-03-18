@@ -50,7 +50,6 @@
   }
 
   const tryDefaultRelays = () => {
-    // Pull out all the stops to try to find the user's profile
     searchRelays([...env.DEFAULT_RELAYS, ...env.INDEXER_RELAYS])
   }
 
@@ -62,57 +61,94 @@
     modal = null
   }
 
+  /**
+   * Proceed to the app: load user data then navigate to the notes feed.
+   * Called either when all events are found, or when UPlanet auto-proceeds
+   * after a short timeout (profile might exist on the relay but kind 10002
+   * relay list is not required for UPlanet — the relay is derived from the URL).
+   */
+  const proceed = () => {
+    if (found) return
+    found = true
+    loadUserData()
+    sleep(Math.max(0, 2500 - (Date.now() - t))).then(async () => {
+      showFound = true
+      await sleep(2000)
+      router.at("notes").push()
+    })
+  }
+
   let found, showFound, failed, modal
   let customRelay = ""
 
+  // Search the UPlanet relay (already injected first in env.DEFAULT_RELAYS
+  // by engine/state.ts when detectUPlanetServices() returns a result)
   tryDefaultRelays()
 
+  // React to relay selection event
   $: {
     const relaySelectionsEvent = $events.find(spec({kind: RELAYS}))
-
     if (!found && relaySelectionsEvent) {
       searchRelays(getRelayTagValues(relaySelectionsEvent.tags))
     }
   }
 
+  // UPlanet: finding the profile (kind 0) is enough — kind 10002 may not
+  // be published by older make_NOSTRCARD.sh versions.
+  // Standard: require all 3 events (kind 0 + 3 + 10002).
   $: {
-    if (!found && $events.length === 3) {
-      found = true
+    const profileFound = $events.some(e => e.kind === PROFILE)
+    const allFound = $events.length === 3
 
-      // Reload user data and pull in messages, notifications, etc
-      loadUserData()
-
-      // Show a success message once they've had time to read the intro message
-      sleep(Math.max(0, 2500 - (Date.now() - t))).then(async () => {
-        showFound = true
-
-        // Give them a couple seconds to see the loading screen
-        await sleep(2500)
-
-        router.at("notes").push()
-      })
+    if (!found && (allFound || (uplanet && profileFound))) {
+      proceed()
     }
   }
 
   onMount(() => {
-    sleep(8000).then(() => {
-      failed = true
-    })
+    if (uplanet) {
+      // UPlanet: relay is known from URL — auto-proceed if profile not found
+      // quickly (new account or relay temporarily slow)
+      sleep(4000).then(() => {
+        if (!found) {
+          proceed()
+        }
+      })
+    } else {
+      // Standard Nostr: show failure UI after 8s
+      sleep(8000).then(() => {
+        if (!found) failed = true
+      })
+    }
   })
 </script>
 
 <Content size="lg">
   {#if showFound}
     <p class="text-center text-2xl">{$_("login.connectSuccess")}</p>
+  {:else if uplanet}
+    <!-- UPlanet: simplified UI — relay is known, no confusing options -->
+    <p class="text-2xl">{$_("login.connectSearching")}</p>
+    <p class="flex items-center gap-2 text-sm text-tinted-400">
+      <i class="fa fa-circle-nodes text-accent" />
+      {$_("login.uplanetDetected", {values: {relay: uplanet.relayUrl}})}
+    </p>
   {:else if failed && !found}
+    <!-- Standard Nostr: relay selection fallback UI -->
     <p class="text-2xl">{$_("login.connectFailed")}</p>
+    <p>
+      {$_("login.youCanAlso")}
+      <Button class="text-inherit cursor-pointer bg-transparent p-0 underline" on:click={skip}
+        >{$_("login.skipThisStep")}</Button
+      >{$_("login.skipWarning")}
+    </p>
+    <div class="flex justify-between gap-2">
+      <Button class="btn" on:click={tryDefaultRelays}>{$_("login.tryAgain")}</Button>
+      <Button class="btn btn-accent" on:click={() => openModal("custom_relay")}
+        >{$_("login.selectRelaysManually")}</Button>
+    </div>
   {:else}
     <p class="text-2xl">{$_("login.connectSearching")}</p>
-    {#if uplanet}
-      <p class="text-sm text-neutral-400">
-        {$_("login.uplanetDetected", {values: {relay: uplanet.relayUrl}})}
-      </p>
-    {/if}
     <p>
       {$_("login.selectRelaysHint")}
       <Button
@@ -120,8 +156,6 @@
         on:click={() => openModal("custom_relay")}>{$_("common.here")}</Button
       >.
     </p>
-  {/if}
-  {#if !showFound}
     <p>
       {$_("login.youCanAlso")}
       <Button class="text-inherit cursor-pointer bg-transparent p-0 underline" on:click={skip}
@@ -129,17 +163,10 @@
       >{$_("login.skipWarning")}
     </p>
   {/if}
-  {#if failed && !found}
-    <div class="flex justify-between gap-2">
-      <Button class="btn" on:click={tryDefaultRelays}>{$_("login.tryAgain")}</Button>
-      <Button class="btn btn-accent" on:click={() => openModal("custom_relay")}
-        >{$_("login.selectRelaysManually")}</Button>
-    </div>
-  {/if}
   <Spinner />
 </Content>
 
-{#if !showFound && modal === "custom_relay"}
+{#if !showFound && !uplanet && modal === "custom_relay"}
   <Modal>
     <Content size="lg">
       <Subheading>{$_("login.customRelay")}</Subheading>
