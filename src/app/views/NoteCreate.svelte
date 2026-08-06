@@ -38,6 +38,7 @@
   import NoteContent from "src/app/shared/NoteContent.svelte"
   import type {Values} from "src/app/shared/NoteOptions.svelte"
   import NoteOptions from "src/app/shared/NoteOptions.svelte"
+  import UdriveAttachButton from "src/app/shared/UdriveAttachButton.svelte"
   import {makeEditor} from "src/app/editor"
   import {drafts} from "src/app/state"
   import {router} from "src/app/util/router"
@@ -313,11 +314,13 @@
         </div>
         <div class="flex items-center justify-end gap-2 text-neutral-200">
           <small>
-            {commaFormat($charCount)} {$_("noteCreate.characters")}
+            {commaFormat($charCount)}
+            {$_("noteCreate.characters")}
           </small>
           <span>•</span>
           <small>
-            {commaFormat($wordCount)} {$_("noteCreate.words")}
+            {commaFormat($wordCount)}
+            {$_("noteCreate.words")}
           </small>
           <span>•</span>
           <button type="button" on:click={togglePreview} class="cursor-pointer text-sm underline">
@@ -351,6 +354,11 @@
           class="hover:bg-white-l staatliches flex h-7 w-7 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded bg-white px-6 text-xl text-black transition-all"
           on:click|preventDefault={() => editor.chain().selectFiles().run()}>
           <i class="fa fa-upload" />
+        </button>
+        <button
+          type="button"
+          class="hover:bg-white-l staatliches flex h-7 w-7 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded bg-white px-6 text-xl text-black transition-all">
+          <UdriveAttachButton {editor} class="text-black" />
         </button>
       </div>
     </FlexColumn>

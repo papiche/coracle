@@ -1,7 +1,8 @@
 <script lang="ts">
-  import {_} from "svelte-i18n"
+  import {_, locale} from "svelte-i18n"
   import {signer, pubkey, sessions, displayProfileByPubkey} from "@welshman/app"
   import {toggleTheme, installPrompt, installAsPWA} from "src/partials/state"
+  import {localizedLegalDoc} from "src/util/misc"
   import Button from "src/partials/Button.svelte"
   import Link from "src/partials/Link.svelte"
   import SliderMenu from "src/partials/SliderMenu.svelte"
@@ -121,8 +122,10 @@
     </div>
     <div class="staatliches mt-8 block flex h-8 justify-center gap-2 px-8 text-tinted-400">
       <Link class="hover:text-tinted-200" href="/about">{$_("menu.about")}</Link> /
-      <Link external class="hover:text-tinted-200" href="/terms.html">{$_("menu.terms")}</Link> /
-      <Link external class="hover:text-tinted-200" href="/privacy.html">{$_("menu.privacy")}</Link>
+      <Link external class="hover:text-tinted-200" href={localizedLegalDoc("terms", $locale)}
+        >{$_("menu.terms")}</Link> /
+      <Link external class="hover:text-tinted-200" href={localizedLegalDoc("privacy", $locale)}
+        >{$_("menu.privacy")}</Link>
     </div>
   </SliderMenu>
 {/if}

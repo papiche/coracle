@@ -210,6 +210,11 @@
     "yourNoRelaysEnd": "to set up your messaging relays.",
     "sendAnyway": "Send anyway"
   },
+  "udrive": {
+    "browse": "Browse my uDRIVE",
+    "notConfigured": "No uDRIVE configured for your account yet.",
+    "empty": "Your uDRIVE is empty."
+  },
   "relayList": {
     "title": "Relays",
     "yourRelays": "Your relays",
@@ -553,6 +558,10 @@
     "missing": "Missing: {fields}",
     "geoFeatured": "Geo-messages featured in UMAP",
     "likeCost": "Liking costs {cost} ZEN (transferred to author)",
+    "udriveStorage": "uDRIVE Storage",
+    "udriveFiles": "{count} files",
+    "udriveUnavailable": "uDRIVE storage unavailable",
+    "udriveOpen": "Open uDRIVE",
     "checkWallet": "Check full wallet details",
     "noWallet": "No ZEN wallet configured",
     "noWalletDescription": "This user has not set up their MULTIPASS or ZEN Card. They cannot receive ZEN from likes.",

@@ -20,17 +20,19 @@
     checkAllZenBalances,
     checkZenCardShares,
     checkZenReceivability,
+    checkUdriveSize,
     getApiServerUrl,
     type AllZenBalances,
     type ZenCardShares,
     type ProfileIdentities,
     type ZenReceivability,
+    type UdriveStats,
   } from "src/util/zen"
+  import {getIpfsGateway} from "src/util/ipfs"
   import Popover from "src/partials/Popover.svelte"
   import Link from "src/partials/Link.svelte"
 
-  export let profile: Record<string, any> | null =
-    null
+  export let profile: Record<string, any> | null = null
 
   let loading = true
   let balanceData: AllZenBalances = {
@@ -40,6 +42,8 @@
   let identities: ProfileIdentities = {}
   let receivability: ZenReceivability | null = null
   let sharesData: ZenCardShares | null = null
+  let udriveStats: UdriveStats | null = null
+  let udriveLoading = false
 
   // Extract identities from profile
   $: {
@@ -52,9 +56,10 @@
         email: profile.email,
       }
 
-      // Also try to extract from event tags if available
-      if (profile.tags) {
-        const tagIdentities = extractIdentitiesFromTags(profile.tags)
+      // ipns_vault (and other "i" tag-only fields) live on the raw kind-0 event,
+      // never in its JSON content — deriveProfile() exposes it as profile.event.tags
+      if (profile.event?.tags) {
+        const tagIdentities = extractIdentitiesFromTags(profile.event.tags)
         identities = {...identities, ...tagIdentities}
       }
 
@@ -66,6 +71,17 @@
   // Fetch balances when identities change
   $: if (identities.g1pub || identities.g1v2 || identities.zencard) {
     fetchBalances()
+  }
+
+  // Fetch uDRIVE storage usage when an ipns_vault is available
+  $: if (identities.ipns_vault) {
+    fetchUdriveStats(identities.ipns_vault)
+  }
+
+  async function fetchUdriveStats(ipnsVault: string) {
+    udriveLoading = true
+    udriveStats = await checkUdriveSize(ipnsVault)
+    udriveLoading = false
   }
 
   async function fetchBalances() {
@@ -115,6 +131,9 @@
       : null
   $: shortZencardV2 = identities.zencard_v2
     ? `${identities.zencard_v2.substring(0, 8)}...${identities.zencard_v2.substring(identities.zencard_v2.length - 4)}`
+    : null
+  $: udriveUrl = identities.ipns_vault
+    ? `${getIpfsGateway()}/ipns/${identities.ipns_vault.replace(/^\/?ipns\//, "").trim()}`
     : null
 </script>
 
@@ -205,7 +224,7 @@
               {shortZencard}
             </div>
             {#if shortZencardV2}
-              <div class="mb-1 font-mono text-xs text-purple-400/70">
+              <div class="text-purple-400/70 mb-1 font-mono text-xs">
                 SS58: {shortZencardV2}
               </div>
             {/if}
@@ -222,8 +241,8 @@
               <div class="text-sm text-neutral-500">0 ZEN</div>
             {/if}
             {#if sharesData && sharesData.totalTransfers > 0}
-              <div class="mt-2 border-t border-neutral-700/50 pt-2">
-                <div class="text-xs font-bold text-amber-400 mb-1">
+              <div class="border-neutral-700/50 mt-2 border-t pt-2">
+                <div class="text-amber-400 mb-1 text-xs font-bold">
                   {$_("zen.cooperativeShares")}
                 </div>
                 <div class="flex justify-between text-xs">
@@ -236,7 +255,8 @@
                 </div>
                 <div class="flex justify-between text-xs">
                   <span class="text-neutral-400">{$_("zen.distributions")}</span>
-                  <span class="text-neutral-300 font-mono">{sharesData.validTransfers}/{sharesData.totalTransfers}</span>
+                  <span class="font-mono text-neutral-300"
+                    >{sharesData.validTransfers}/{sharesData.totalTransfers}</span>
                 </div>
               </div>
             {/if}
@@ -294,6 +314,35 @@
         {/if}
       </div>
     </Popover>
+    {#if identities.ipns_vault}
+      <Popover triggerType="mouseenter" opts={{hideOnClick: true}}>
+        <div slot="trigger" class="flex cursor-pointer items-center gap-1">
+          <i class="fa fa-hdd text-neutral-400" />
+          {#if udriveLoading}
+            <span class="animate-pulse text-sm text-neutral-400">...</span>
+          {:else if udriveStats}
+            <span class="font-mono text-sm text-neutral-300">{udriveStats.formattedSize}</span>
+          {:else}
+            <span class="text-sm text-neutral-500">--</span>
+          {/if}
+        </div>
+        <div slot="tooltip" class="max-w-xs p-3 text-sm">
+          <div class="mb-1 font-bold text-neutral-300">{$_("zen.udriveStorage")}</div>
+          {#if udriveStats}
+            <div class="text-xs text-neutral-400">
+              {$_("zen.udriveFiles", {values: {count: udriveStats.totalFiles}})}
+            </div>
+          {:else}
+            <div class="text-xs text-neutral-500">{$_("zen.udriveUnavailable")}</div>
+          {/if}
+          {#if udriveUrl}
+            <Link external class="mt-2 block text-xs text-accent underline" href={udriveUrl}>
+              {$_("zen.udriveOpen")}
+            </Link>
+          {/if}
+        </div>
+      </Popover>
+    {/if}
   </div>
 {:else}
   <!-- No wallet info available -->

@@ -1,6 +1,7 @@
 <script lang="ts">
   import cx from "classnames"
-  import {formatTimestamp} from "@welshman/lib"
+  import {formatTimestamp, now, MINUTE, HOUR, DAY} from "@welshman/lib"
+  import {getTagValue} from "@welshman/util"
   import {PublishStatus} from "@welshman/net"
   import {abortThunk, session, thunkHasStatus, thunks} from "@welshman/app"
   import {fly} from "svelte/transition"
@@ -12,12 +13,23 @@
   import PersonCircle from "src/app/shared/PersonCircle.svelte"
   import PersonName from "src/app/shared/PersonName.svelte"
   import NoteInfo from "src/app/shared/NoteInfo.svelte"
-  import {ensureMessagePlaintext, userSettings} from "src/engine"
+  import {getMessageView, userSettings} from "src/engine"
   import {router} from "src/app/util/router"
 
   export let message
 
-  const getContent = e => (e.kind === 4 ? ensureMessagePlaintext(e) : e.content) || ""
+  const formatTimeLeft = (seconds: number) => {
+    const delta = seconds - now()
+
+    if (delta <= 0) return "expired"
+    if (delta < HOUR) return `${Math.ceil(delta / MINUTE)}m`
+    if (delta < DAY) return `${Math.ceil(delta / HOUR)}h`
+
+    return `${Math.ceil(delta / DAY)}d`
+  }
+
+  const deleteMessage = () =>
+    router.at("notes").of(message.id).at("delete").qp({kind: message.kind}).open()
 
   const elapsed = ticker()
 
@@ -25,6 +37,7 @@
 
   $: thunk = $thunks.find(t => t.event.id === message.id)
   $: remaining = Math.ceil($userSettings.send_delay / 1000) - $elapsed
+  $: expiresAt = parseInt(getTagValue("expiration", message.tags) || "") || null
 </script>
 
 <div in:fly={{y: 20}} class="grid gap-2 py-1">
@@ -44,10 +57,28 @@
       </Link>
     {/if}
     <div class="break-words">
-      {#await getContent(message)}
+      {#await getMessageView(message)}
         <!-- pass -->
-      {:then content}
-        <NoteContent showEntire note={{...message, content}} />
+      {:then view}
+        {#if view.channelLabel}
+          <div
+            class="mb-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-accent">
+            <i class="fa {view.channelLabel === 'BRO' ? 'fa-robot' : 'fa-server'}" />
+            {view.channelLabel}
+            {#if view.channelName && view.channelName !== "bro_ia"}
+              <span class="font-normal text-neutral-400">· {view.channelName}</span>
+            {/if}
+          </div>
+        {/if}
+        {#if view.imageUrl}
+          <div class="flex items-center gap-1 text-xs text-neutral-400">
+            <i class="fa fa-lock" />
+            {view.text}
+          </div>
+          <img src={view.imageUrl} alt={view.text} class="max-w-full rounded" />
+        {:else}
+          <NoteContent showEntire note={{...message, content: view.text}} />
+        {/if}
       {:catch}
         <p class="text-neutral-400">🔒 Unable to decrypt this message</p>
       {/await}
@@ -74,6 +105,21 @@
         {formatTimestamp(message.created_at)}
       {/if}
       <div class="flex items-center gap-3">
+        {#if expiresAt}
+          <Popover triggerType="mouseenter">
+            <i slot="trigger" class="fa fa-clock cursor-pointer text-neutral-400" />
+            <p slot="tooltip">
+              {#if expiresAt - now() > 0}
+                Expires in {formatTimeLeft(expiresAt)} ({formatTimestamp(expiresAt)})
+              {:else}
+                Expired {formatTimestamp(expiresAt)}
+              {/if}
+            </p>
+          </Popover>
+        {/if}
+        {#if message.pubkey === $session.pubkey}
+          <i class="fa fa-trash cursor-pointer text-neutral-400" on:click={deleteMessage} />
+        {/if}
         <i
           class="fa fa-info-circle cursor-pointer text-neutral-400"
           on:click={() => (showDetails = true)} />

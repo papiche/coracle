@@ -210,6 +210,11 @@
     "yourNoRelaysEnd": "para configurar tus relés de mensajería.",
     "sendAnyway": "Enviar de todas formas"
   },
+  "udrive": {
+    "browse": "Explorar mi uDRIVE",
+    "notConfigured": "Ningún uDRIVE configurado para esta cuenta.",
+    "empty": "Tu uDRIVE está vacío."
+  },
   "relayList": {
     "title": "Relés",
     "yourRelays": "Tus relés",
@@ -553,6 +558,10 @@
     "missing": "Faltante: {fields}",
     "geoFeatured": "Mensajes geolocalizados en UMAP",
     "likeCost": "Dar me gusta cuesta {cost} ZEN (transferido al autor)",
+    "udriveStorage": "Almacenamiento uDRIVE",
+    "udriveFiles": "{count} archivos",
+    "udriveUnavailable": "Almacenamiento uDRIVE no disponible",
+    "udriveOpen": "Abrir uDRIVE",
     "checkWallet": "Ver detalles de la cartera",
     "noWallet": "Sin cartera ZEN configurada",
     "noWalletDescription": "Este usuario no ha configurado su MULTIPASS ni su ZEN Card. No puede recibir ZEN de los me gusta.",

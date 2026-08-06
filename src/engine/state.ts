@@ -137,6 +137,13 @@ import {appDataKeys} from "src/util/nostr"
 import {readable, derived, writable} from "svelte/store"
 
 import {detectUPlanetServices, verifyUPlanetServices} from "src/util/uplanet-detect"
+import {
+  parseUplanetEnvelope,
+  displayUplanetChannel,
+  displayUplanetPayload,
+  parseUencImgEnvelope,
+  decryptUencImage,
+} from "src/util/uplanetChannels"
 
 export const env = {
   CLIENT_ID: import.meta.env.VITE_CLIENT_ID as string,
@@ -207,6 +214,43 @@ export const ensureMessagePlaintext = async (e: TrustedEvent) => {
   }
 
   return getPlaintext(e)
+}
+
+export type MessageView = {
+  text: string
+  channelLabel: string | null
+  channelName: string | null
+  imageUrl?: string
+}
+
+export const getMessageView = async (e: TrustedEvent): Promise<MessageView> => {
+  const raw = (e.kind === 4 ? await ensureMessagePlaintext(e) : e.content) || ""
+
+  const uencImg = parseUencImgEnvelope(raw)
+
+  if (uencImg) {
+    try {
+      const imageUrl = await decryptUencImage(uencImg)
+
+      return {text: uencImg.filename, channelLabel: null, channelName: null, imageUrl}
+    } catch (err) {
+      return {
+        text: `🔒 Failed to decrypt image: ${(err as Error).message || err}`,
+        channelLabel: null,
+        channelName: null,
+      }
+    }
+  }
+
+  const envelope = parseUplanetEnvelope(raw)
+
+  if (!envelope) return {text: raw, channelLabel: null, channelName: null}
+
+  return {
+    text: displayUplanetPayload(envelope.payload),
+    channelLabel: displayUplanetChannel(envelope.channel),
+    channelName: envelope.channel,
+  }
 }
 
 // Decrypt stuff as it comes in
@@ -389,9 +433,7 @@ export const muteRegex = derived(
     const words = [...$settings.muted_words, ...$mutedWords]
       .map(w => escapeRegExp(w.toLowerCase().trim()))
       .filter(Boolean)
-    return words.length > 0
-      ? new RegExp(`\\b(${words.join("|")})\\b`, "i")
-      : null
+    return words.length > 0 ? new RegExp(`\\b(${words.join("|")})\\b`, "i") : null
   },
 )
 
@@ -534,6 +576,12 @@ export const channels = derived(
 
 export const channelHasNewMessages = (channel: Channel) =>
   channel.last_received > Math.max(channel.last_sent, channel.last_checked)
+
+export const channelUnreadCount = (channel: Channel) => {
+  const since = Math.max(channel.last_sent, channel.last_checked)
+
+  return channel.messages.filter(m => m.pubkey !== pubkey.get() && m.created_at > since).length
+}
 
 export const hasNewMessages = derived(channels, $channels => $channels.some(channelHasNewMessages))
 

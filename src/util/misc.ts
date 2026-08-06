@@ -263,3 +263,10 @@ export const toSpliced = <T>(xs: T[], start: number, deleteCount: number = 0, ..
 
 export const ensureMailto = (value: string) =>
   !value.includes(":") && value.includes("@") ? "mailto:" + value : value
+
+/** Path to the localized terms/privacy fragment, falling back to English. */
+export const localizedLegalDoc = (name: "terms" | "privacy", locale: string | null | undefined) => {
+  const lang = locale?.split("-")[0]
+
+  return lang === "fr" || lang === "es" ? `/${name}.${lang}.html` : `/${name}.html`
+}

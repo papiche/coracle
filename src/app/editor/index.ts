@@ -13,8 +13,22 @@ import {ensureProto} from "src/util/misc"
 import {getVerifiedUPlanet} from "src/util/uplanet-detect"
 import {env} from "src/engine/state"
 import {uploadFile} from "src/engine/commands"
+import type {UdriveFile} from "src/util/zen"
 import {MentionNodeView} from "./MentionNodeView"
 import ProfileSuggestion from "./ProfileSuggestion.svelte"
+
+/** Insert an already-uploaded uDRIVE file into the editor without re-uploading it. */
+export const insertUdriveFile = (editor: Editor, file: UdriveFile, url: string) => {
+  if (file.type === "image" || file.type === "video") {
+    editor.commands.insertContent({type: file.type, attrs: {src: url, alt: file.name}})
+  } else {
+    editor.commands.insertContent({
+      type: "text",
+      text: file.name,
+      marks: [{type: "link", attrs: {href: url}}],
+    })
+  }
+}
 
 export const makeEditor = ({
   aggressive = false,

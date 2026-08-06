@@ -18,6 +18,8 @@
   import {hasNip44, sendMessage, userSettings} from "src/engine"
   import {makeEditor} from "src/app/editor"
   import Message from "src/app/shared/Message.svelte"
+  import UdriveAttachButton from "src/app/shared/UdriveAttachButton.svelte"
+  import EncryptedImageDMButton from "src/app/shared/EncryptedImageDMButton.svelte"
   import EditorContent from "src/app/editor/EditorContent.svelte"
 
   export let pubkeys
@@ -184,6 +186,18 @@
           on:click={() => editor.chain().selectFiles().run()}>
           <i class="fa-solid fa-paperclip fa-lg" />
         </button>
+        <button
+          class="flex cursor-pointer flex-col justify-center gap-2 p-3
+                 py-6 text-neutral-100 transition-all hover:bg-accent hover:text-white">
+          <UdriveAttachButton {editor} class="fa-lg" />
+        </button>
+        {#if pubkeys.length === 1}
+          <button
+            class="flex cursor-pointer flex-col justify-center gap-2 p-3
+                   py-6 text-neutral-100 transition-all hover:bg-accent hover:text-white">
+            <EncryptedImageDMButton recipient={pubkeys[0]} class="fa-lg" />
+          </button>
+        {/if}
         <button
           on:click={sendOrConfirm}
           class="flex cursor-pointer flex-col justify-center gap-2 p-3

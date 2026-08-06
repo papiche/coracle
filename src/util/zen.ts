@@ -1,5 +1,6 @@
 import {writable} from "svelte/store"
 import logger from "src/util/logger"
+import {getIpfsGateway} from "src/util/ipfs"
 
 /**
  * ZEN Balance Service
@@ -407,14 +408,11 @@ export async function checkZenCardShares(email: string): Promise<ZenCardShares |
 
   try {
     const apiUrl = getApiServerUrl()
-    const response = await fetch(
-      `${apiUrl}/check_zencard?email=${encodeURIComponent(email)}`,
-      {
-        method: "GET",
-        headers: {Accept: "application/json"},
-        signal: controller.signal,
-      },
-    )
+    const response = await fetch(`${apiUrl}/check_zencard?email=${encodeURIComponent(email)}`, {
+      method: "GET",
+      headers: {Accept: "application/json"},
+      signal: controller.signal,
+    })
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -441,6 +439,115 @@ export async function checkZenCardShares(email: string): Promise<ZenCardShares |
 }
 
 /**
+ * uDRIVE storage usage, read from the manifest.json published at the root of
+ * a profile's ipns_vault (see Astroport.ONE/tools/generate_ipfs_structure.sh).
+ */
+export interface UdriveStats {
+  totalSize: number // bytes
+  totalFiles: number
+  formattedSize: string
+}
+
+const formatBytes = (bytes: number): string => {
+  if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(2)} GB`
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(2)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`
+  return `${bytes} B`
+}
+
+/** One entry from manifest.json's "files" array (generate_ipfs_structure.sh) */
+export interface UdriveFile {
+  name: string
+  path: string
+  size: number
+  formattedSize: string
+  type: string // image | video | audio | document | app | ...
+  ipfsLink: string // "<cid>/<filename>" — join with "/ipfs/" to get a full URL
+  category?: string
+}
+
+export interface UdriveManifest {
+  files: UdriveFile[]
+  totalSize: number
+  totalFiles: number
+  formattedSize: string
+}
+
+/** Build a full http(s) URL for a uDRIVE file's ipfs_link */
+export const getUdriveFileUrl = (file: UdriveFile): string =>
+  `${getIpfsGateway()}/ipfs/${file.ipfsLink}`
+
+/**
+ * Fetch the full uDRIVE manifest (file list + totals) for a profile's ipns_vault.
+ * @param ipnsVault - The "ipns_vault" profile field, with or without a leading "/ipns/"
+ */
+export async function fetchUdriveManifest(ipnsVault: string): Promise<UdriveManifest | null> {
+  const key = ipnsVault.replace(/^\/?ipns\//, "").trim()
+  if (!key) return null
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(`${getIpfsGateway()}/ipns/${key}/manifest.json`, {
+      headers: {Accept: "application/json"},
+      signal: controller.signal,
+    })
+
+    if (!response.ok) return null
+
+    const data = await response.json()
+    if (typeof data.total_size !== "number") return null
+
+    const files: UdriveFile[] = Array.isArray(data.files)
+      ? data.files
+          .filter((f: any) => f && f.ipfs_link)
+          .map((f: any) => ({
+            name: f.name,
+            path: f.path,
+            size: f.size ?? 0,
+            formattedSize: f.formatted_size || formatBytes(f.size ?? 0),
+            type: f.type || "document",
+            ipfsLink: f.ipfs_link,
+            category: f.category || undefined,
+          }))
+      : []
+
+    return {
+      files,
+      totalSize: data.total_size,
+      totalFiles: data.total_files ?? files.length,
+      formattedSize: data.formatted_total_size || formatBytes(data.total_size),
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      logger.warn("Timeout fetching uDRIVE manifest for", ipnsVault)
+    } else {
+      logger.error("Error fetching uDRIVE manifest for", ipnsVault, ":", error)
+    }
+    return null
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+/**
+ * Fetch uDRIVE storage stats (totals only) for a profile's ipns_vault.
+ * @param ipnsVault - The "ipns_vault" profile field, with or without a leading "/ipns/"
+ */
+export async function checkUdriveSize(ipnsVault: string): Promise<UdriveStats | null> {
+  const manifest = await fetchUdriveManifest(ipnsVault)
+
+  if (!manifest) return null
+
+  return {
+    totalSize: manifest.totalSize,
+    totalFiles: manifest.totalFiles,
+    formattedSize: manifest.formattedSize,
+  }
+}
+
+/**
  * Global store for the current user's MULTIPASS ZEN balance (from g1v2 SS58).
  * Used to limit the amount of ZEN that can be sent via likes.
  */
@@ -458,8 +565,7 @@ export async function refreshMyZenBalance(identities: ProfileIdentities) {
   myBalanceFetchPending = true
 
   try {
-    const address =
-      identities.g1v2?.trim() || identities.g1pub?.split(":")[0] || null
+    const address = identities.g1v2?.trim() || identities.g1pub?.split(":")[0] || null
     if (!address) return
 
     const balance = await checkZenBalance(address)
@@ -473,4 +579,3 @@ export async function refreshMyZenBalance(identities: ProfileIdentities) {
 
 /** Preset ZEN amounts for the like selector */
 export const ZEN_LIKE_PRESETS = [1, 5, 10, 50, 100] as const
-

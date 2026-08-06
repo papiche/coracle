@@ -25,6 +25,7 @@ import {
   PROFILE,
   RELAYS,
   DIRECT_MESSAGE,
+  DEPRECATED_DIRECT_MESSAGE,
   addToListPublicly,
   makeEvent,
   getAddress,
@@ -250,6 +251,34 @@ export const sendMessage = (channelId: string, content: string, delay: number) =
       tags: [...remove(pubkey.get(), recipients).map(tagPubkey), ...getClientTags()],
     }),
   })
+}
+
+// UPlanet's bro_dm_daemon.sh only ever listens for legacy kind-4 DMs (never the
+// NIP-59 gift-wrapped kind-1059 that sendMessage/sendWrapped produces), so an
+// encrypted image bound for BRO/NODE must be sent as a raw kind-4 event —
+// NIP-44 encrypted directly, matching Astroport.ONE/tools/nostr_node_intercom.py.
+export const sendEncryptedImageDM = async (
+  recipient: string,
+  envelope: {cid: string; encKey: string; iv: string; filename: string; hint?: string},
+) => {
+  const content = JSON.stringify({
+    _uenc_img: {
+      cid: envelope.cid,
+      enc_key: envelope.encKey,
+      iv: envelope.iv,
+      filename: envelope.filename,
+      hint: envelope.hint || "",
+    },
+  })
+
+  const encrypted = await signer.get().nip44.encrypt(recipient, content)
+
+  return signAndPublish(
+    makeEvent(DEPRECATED_DIRECT_MESSAGE, {
+      content: encrypted,
+      tags: [tagPubkey(recipient), ...getClientTags()],
+    }),
+  )
 }
 
 // Settings

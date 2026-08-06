@@ -1,5 +1,6 @@
 <script lang="ts">
-  import {_} from "svelte-i18n"
+  import {_, locale} from "svelte-i18n"
+  import {localizedLegalDoc} from "src/util/misc"
   import {derived} from "svelte/store"
   import {ago, omit, spec, MINUTE} from "@welshman/lib"
   import {PublishStatus, LOCAL_RELAY_URL} from "@welshman/net"
@@ -78,15 +79,17 @@
 </script>
 
 <div class="bottom-sai left-sai top-sai fixed z-sidebar w-72 bg-tinted-700 transition-colors">
-  <Link external class="mb-4 mt-4 flex items-center gap-2 px-6" href="https://opencollective.com/monnaie-libre">
+  <Link
+    external
+    class="mb-4 mt-4 flex items-center gap-2 px-6"
+    href="https://opencollective.com/monnaie-libre">
     <img
       alt="App Logo"
       src={$theme === "dark"
         ? import.meta.env.VITE_APP_WORDMARK_DARK
         : import.meta.env.VITE_APP_WORDMARK_LIGHT} />
   </Link>
-  <MenuDesktopItem path="/notes" isActive={isFeedPage}
-    >{$_("menu.feeds")}</MenuDesktopItem>
+  <MenuDesktopItem path="/notes" isActive={isFeedPage}>{$_("menu.feeds")}</MenuDesktopItem>
   <MenuDesktopItem
     path="/settings/relays"
     disabled={!$signer}
@@ -131,8 +134,10 @@
       on:click={() => setSubMenu("settings")}>{$_("menu.settings")}</Button>
     <div class="staatliches flex h-8 gap-2 px-8 text-tinted-500">
       <Link class="hover:text-tinted-100" href="/about">{$_("menu.about")}</Link> /
-      <Link external class="hover:text-tinted-100" href="/terms.html">{$_("menu.terms")}</Link> /
-      <Link external class="hover:text-tinted-100" href="/privacy.html">{$_("menu.privacy")}</Link>
+      <Link external class="hover:text-tinted-100" href={localizedLegalDoc("terms", $locale)}
+        >{$_("menu.terms")}</Link> /
+      <Link external class="hover:text-tinted-100" href={localizedLegalDoc("privacy", $locale)}
+        >{$_("menu.privacy")}</Link>
     </div>
     {#if subMenu === "settings"}
       <MenuDesktopSecondary onEscape={closeSubMenu}>

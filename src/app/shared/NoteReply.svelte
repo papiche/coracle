@@ -22,6 +22,7 @@
   import type {Values} from "src/app/shared/NoteOptions.svelte"
   import NoteOptions from "src/app/shared/NoteOptions.svelte"
   import NsecWarning from "src/app/shared/NsecWarning.svelte"
+  import UdriveAttachButton from "src/app/shared/UdriveAttachButton.svelte"
   import {drafts} from "src/app/state"
   import {getClientTags, sign, broadcastUserRelays, userSettings} from "src/engine"
   import {makeEditor} from "src/app/editor"
@@ -195,6 +196,7 @@
               <i
                 class="fa fa-paperclip"
                 on:click|preventDefault={() => editor.chain().selectFiles().run()} />
+              <UdriveAttachButton {editor} />
               <i class="fa fa-cog" on:click|preventDefault={openOptions} />
             </div>
           </div>
