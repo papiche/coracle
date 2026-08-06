@@ -22,20 +22,46 @@ GATEWAY="${1:-https://ipfs.copylaradio.com}"
 
 echo "=== Building Coracle for IPFS ==="
 
+# Ensure pnpm is on PATH — activate nvm's Node (see .nvmrc) if it isn't already,
+# since a plain login shell without a default nvm alias falls back to system node.
+if ! command -v pnpm >/dev/null 2>&1 && [ -s "$HOME/.nvm/nvm.sh" ]; then
+  export NVM_DIR="$HOME/.nvm"
+  # shellcheck disable=SC1091
+  source "$NVM_DIR/nvm.sh"
+  nvm use >/dev/null 2>&1 || nvm install
+fi
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "ERROR: pnpm not found. Install Node $(cat .nvmrc 2>/dev/null || echo 22) via nvm and enable corepack." >&2
+  exit 1
+fi
+
 # Install deps if needed
 if [ ! -d node_modules ]; then
   echo "--- Installing dependencies ---"
   pnpm i
 fi
 
+# Several packages (pwa-assets-generator, @capacitor/assets) bundle their own
+# pinned sharp version with a native binding that pnpm doesn't always build —
+# rebuild every native dependency to be sure (see build-in-production.sh)
+echo "--- Rebuilding native dependencies (sharp) ---"
+pnpm rebuild
+
 # Override absolute image paths to relative for IPFS compatibility
 # VITE_APP_LOGO stays absolute (used by pwa-assets-generator with "public" prefix)
 export VITE_APP_WORDMARK_DARK=./images/wordmark-dark.png
 export VITE_APP_WORDMARK_LIGHT=./images/wordmark-light.png
 
-# Build
+# Build (can take a couple minutes: pwa-assets-generator + vite build + cap sync)
 echo "--- Building ---"
-NODE_OPTIONS=--max_old_space_size=16384 pnpm run build 2>&1 | grep -v "^\[fatal\]" || true
+NODE_OPTIONS=--max_old_space_size=16384 pnpm run build 2>&1 | grep -v "^\[fatal\]"
+BUILD_STATUS=${PIPESTATUS[0]}
+
+if [ "$BUILD_STATUS" -ne 0 ]; then
+  echo "ERROR: pnpm run build failed (exit $BUILD_STATUS)"
+  exit 1
+fi
 
 if [ ! -f dist/index.html ]; then
   echo "ERROR: Build failed — dist/index.html not found"

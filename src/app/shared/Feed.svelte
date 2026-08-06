@@ -68,9 +68,12 @@
       useWindowing = useWindowing && !isRelayFeed(subFeed)
     })
 
+    // Kinds 21/22 (videos) have their own dedicated menu, no need to duplicate them here
+    const defaultKinds = noteKinds.filter(kind => kind !== 21 && kind !== 22)
+
     const definition = hasKinds
       ? feed.definition
-      : makeIntersectionFeed(makeKindFeed(...noteKinds), feed.definition)
+      : makeIntersectionFeed(makeKindFeed(...defaultKinds), feed.definition)
 
     ctrl = makeFeedController({
       feed: definition,

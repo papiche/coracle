@@ -184,10 +184,24 @@ export const ensureMessagePlaintext = async (e: TrustedEvent) => {
     const signer = getSigner(session)
 
     if (signer) {
-      const result = await signer.nip04.decrypt(other, e.content)
+      // Kind 4 is supposed to be NIP-04, but some peers (eg. UPlanet's BRO/NODE
+      // scripts) send NIP-44 ciphertext in kind-4 events. NIP-04 content is
+      // always "base64(ct)?iv=base64(iv)"; anything else is assumed NIP-44.
+      const isNip04Format = e.content.includes("?iv=")
+      const decrypters =
+        isNip04Format || !signer.nip44 ? [signer.nip04] : [signer.nip44, signer.nip04]
 
-      if (result) {
-        setPlaintext(e, result)
+      for (const decrypter of decrypters) {
+        try {
+          const result = await decrypter.decrypt(other, e.content)
+
+          if (result) {
+            setPlaintext(e, result)
+            break
+          }
+        } catch (err) {
+          // try the next format
+        }
       }
     }
   }

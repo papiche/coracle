@@ -69,7 +69,7 @@
       </Popover>
       <Popover triggerType="mouseenter">
         <div slot="trigger">
-          <Link external href="https://info.coracle.social">
+          <Link external href="https://opencollective.com/monnaie-libre">
             <i class="fa fa-earth-americas" />
           </Link>
         </div>

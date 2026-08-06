@@ -12,4 +12,4 @@ include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../node_modules/.pnpm/@capacitor+filesystem@8.1.2_@capacitor+core@8.1.0/node_modules/@capacitor/filesystem/android')
 
 include ':nostr-signer-capacitor-plugin'
-project(':nostr-signer-capacitor-plugin').projectDir = new File('../node_modules/.pnpm/nostr-signer-capacitor-plugin@https+++codeload.github.com+coracle-social+nostr-signer-c_f3ed690fb83e366d71519bc46cb4f756/node_modules/nostr-signer-capacitor-plugin/android')
+project(':nostr-signer-capacitor-plugin').projectDir = new File('../node_modules/.pnpm/nostr-signer-capacitor-plugin@https+++codeload.github.com+coracle-social+nostr-signer-capacit_6pvff576em5uwsog5x3w6ckkty/node_modules/nostr-signer-capacitor-plugin/android')

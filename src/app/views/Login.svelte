@@ -34,7 +34,7 @@
   }
 
   // Keygen link: served via the UPlanet IPFS gateway
-  const keygenUrl = `${getIpfsGateway()}/ipns/copylaradio.com/keygen-2.html`
+  const keygenUrl = `${getIpfsGateway()}/ipns/copylaradio.com/g1.html`
 
   let signerApps: AppInfo[] = []
 

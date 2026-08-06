@@ -48,6 +48,8 @@
         <!-- pass -->
       {:then content}
         <NoteContent showEntire note={{...message, content}} />
+      {:catch}
+        <p class="text-neutral-400">🔒 Unable to decrypt this message</p>
       {/await}
     </div>
     <small
