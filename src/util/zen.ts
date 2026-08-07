@@ -1,6 +1,7 @@
 import {writable} from "svelte/store"
 import logger from "src/util/logger"
 import {getIpfsGateway} from "src/util/ipfs"
+import {resolveApiUrl} from "src/util/uplanet-detect"
 
 /**
  * ZEN Balance Service
@@ -76,83 +77,6 @@ export interface ZenReceivability {
 // Fetch timeout (10 seconds)
 const FETCH_TIMEOUT_MS = 10000
 
-// Fallback API used when the page is served from an unrecognised hostname
-// (e.g. a public IPFS gateway that is not a local UPlanet node).
-const DEFAULT_ZEN_API = "https://u.copylaradio.com"
-
-// API URL calculation (from current page URL)
-export function getApiServerUrl(): string {
-  if (typeof window === "undefined") return DEFAULT_ZEN_API
-
-  const url = new URL(window.location.href)
-
-  // Replace ipfs. with u. in hostname
-  const hostname = url.hostname.replace(/^ipfs\./, "u.")
-
-  // Replace port 8080 with 54321 if present
-  let port = url.port
-  if (port === "8080") {
-    port = "54321"
-  }
-
-  // Guard: if the derived hostname doesn't look like a local or UPlanet host, use the default
-  const isLocal = /^(localhost|127\.0\.0\.1)$/.test(hostname)
-  const isPrivate = /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname)
-  const isUPlanet = hostname.startsWith("u.")
-  if (!isLocal && !isPrivate && !isUPlanet) {
-    return DEFAULT_ZEN_API
-  }
-
-  // Build the API URL
-  const protocol = url.protocol
-  return port ? `${protocol}//${hostname}:${port}` : `${protocol}//${hostname}`
-}
-
-// Cached resolved API URL (set once after health check succeeds or fails)
-let _resolvedApiUrl: string | null = null
-let _resolvedApiUrlPromise: Promise<string> | null = null
-
-/**
- * Resolve the best available ZEN API URL with a 2-second health check.
- * Tries the local UPlanet instance first; falls back to DEFAULT_ZEN_API if unreachable.
- * The result is cached after the first resolution — no repeated round-trips.
- */
-export async function resolveApiServerUrl(): Promise<string> {
-  if (_resolvedApiUrl !== null) return _resolvedApiUrl
-
-  if (!_resolvedApiUrlPromise) {
-    _resolvedApiUrlPromise = (async () => {
-      const local = getApiServerUrl()
-
-      // Already pointing to the default — no health check needed
-      if (local === DEFAULT_ZEN_API) {
-        _resolvedApiUrl = DEFAULT_ZEN_API
-        return DEFAULT_ZEN_API
-      }
-
-      try {
-        const res = await fetch(`${local}/.well-known/nostr/nip96.json`, {
-          method: "HEAD",
-          signal: AbortSignal.timeout(2000),
-        })
-        if (res.ok) {
-          logger.info("[ZEN] Local API reachable:", local)
-          _resolvedApiUrl = local
-          return local
-        }
-      } catch {
-        // Local instance unreachable or too slow — fall back silently
-      }
-
-      logger.info("[ZEN] Local API not reachable, using fallback:", DEFAULT_ZEN_API)
-      _resolvedApiUrl = DEFAULT_ZEN_API
-      return DEFAULT_ZEN_API
-    })()
-  }
-
-  return _resolvedApiUrlPromise
-}
-
 /** Build a ZenBalance result representing a fetch/parse error (non-null for callers to display) */
 const zenError = (address: string, error: string): ZenBalance => ({
   g1Balance: 0,
@@ -171,7 +95,7 @@ export async function checkZenBalance(address: string): Promise<ZenBalance | nul
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
   try {
-    const apiUrl = await resolveApiServerUrl()
+    const apiUrl = await resolveApiUrl()
     const response = await fetch(`${apiUrl}/check_balance?g1pub=${encodeURIComponent(address)}`, {
       method: "GET",
       headers: {Accept: "application/json"},
@@ -407,7 +331,7 @@ export async function checkZenCardShares(email: string): Promise<ZenCardShares |
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
   try {
-    const apiUrl = getApiServerUrl()
+    const apiUrl = await resolveApiUrl()
     const response = await fetch(`${apiUrl}/check_zencard?email=${encodeURIComponent(email)}`, {
       method: "GET",
       headers: {Accept: "application/json"},
@@ -478,18 +402,34 @@ export const getUdriveFileUrl = (file: UdriveFile): string =>
   `${getIpfsGateway()}/ipfs/${file.ipfsLink}`
 
 /**
- * Fetch the full uDRIVE manifest (file list + totals) for a profile's ipns_vault.
+ * Build the uDRIVE root URL for a profile: the ipns_vault key resolves to a
+ * station-wide tree, with each user's uDRIVE nested under their own email —
+ * e.g. .../ipns/<key>/<email>/APP/uDRIVE/
  * @param ipnsVault - The "ipns_vault" profile field, with or without a leading "/ipns/"
+ * @param email - The profile's "email" field
  */
-export async function fetchUdriveManifest(ipnsVault: string): Promise<UdriveManifest | null> {
+export const getUdriveBaseUrl = (ipnsVault: string, email: string): string | null => {
   const key = ipnsVault.replace(/^\/?ipns\//, "").trim()
-  if (!key) return null
+  if (!key || !email) return null
+
+  return `${getIpfsGateway()}/ipns/${key}/${email}/APP/uDRIVE`
+}
+
+/**
+ * Fetch the full uDRIVE manifest (file list + totals) for a profile's ipns_vault + email.
+ */
+export async function fetchUdriveManifest(
+  ipnsVault: string,
+  email: string,
+): Promise<UdriveManifest | null> {
+  const baseUrl = getUdriveBaseUrl(ipnsVault, email)
+  if (!baseUrl) return null
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
   try {
-    const response = await fetch(`${getIpfsGateway()}/ipns/${key}/manifest.json`, {
+    const response = await fetch(`${baseUrl}/manifest.json`, {
       headers: {Accept: "application/json"},
       signal: controller.signal,
     })
@@ -532,11 +472,13 @@ export async function fetchUdriveManifest(ipnsVault: string): Promise<UdriveMani
 }
 
 /**
- * Fetch uDRIVE storage stats (totals only) for a profile's ipns_vault.
- * @param ipnsVault - The "ipns_vault" profile field, with or without a leading "/ipns/"
+ * Fetch uDRIVE storage stats (totals only) for a profile's ipns_vault + email.
  */
-export async function checkUdriveSize(ipnsVault: string): Promise<UdriveStats | null> {
-  const manifest = await fetchUdriveManifest(ipnsVault)
+export async function checkUdriveSize(
+  ipnsVault: string,
+  email: string,
+): Promise<UdriveStats | null> {
+  const manifest = await fetchUdriveManifest(ipnsVault, email)
 
   if (!manifest) return null
 

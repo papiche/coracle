@@ -10,6 +10,7 @@
   import Button from "src/partials/Button.svelte"
   import CopyValueSimple from "src/partials/CopyValueSimple.svelte"
   import PersonBadgeSmall from "src/app/shared/PersonBadgeSmall.svelte"
+  import ExpirationBadge from "src/app/shared/ExpirationBadge.svelte"
   import {readUserList, displayUserList, mapListToFeed} from "src/domain"
   import {router} from "src/app/util"
   import {quantify} from "src/util/misc"
@@ -33,7 +34,8 @@
   }
 </script>
 
-<div class="flex justify-end text-xs">
+<div class="flex items-center justify-end gap-2 text-xs">
+  <ExpirationBadge tags={event.tags} />
   {formatTimestamp(event.created_at)}
 </div>
 <div class="flex gap-3">

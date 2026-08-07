@@ -21,14 +21,14 @@
     checkZenCardShares,
     checkZenReceivability,
     checkUdriveSize,
-    getApiServerUrl,
+    getUdriveBaseUrl,
     type AllZenBalances,
     type ZenCardShares,
     type ProfileIdentities,
     type ZenReceivability,
     type UdriveStats,
   } from "src/util/zen"
-  import {getIpfsGateway} from "src/util/ipfs"
+  import {getApiUrl} from "src/util/uplanet-detect"
   import Popover from "src/partials/Popover.svelte"
   import Link from "src/partials/Link.svelte"
 
@@ -73,14 +73,14 @@
     fetchBalances()
   }
 
-  // Fetch uDRIVE storage usage when an ipns_vault is available
-  $: if (identities.ipns_vault) {
-    fetchUdriveStats(identities.ipns_vault)
+  // Fetch uDRIVE storage usage when an ipns_vault + email are available
+  $: if (identities.ipns_vault && identities.email) {
+    fetchUdriveStats(identities.ipns_vault, identities.email)
   }
 
-  async function fetchUdriveStats(ipnsVault: string) {
+  async function fetchUdriveStats(ipnsVault: string, email: string) {
     udriveLoading = true
-    udriveStats = await checkUdriveSize(ipnsVault)
+    udriveStats = await checkUdriveSize(ipnsVault, email)
     udriveLoading = false
   }
 
@@ -132,9 +132,10 @@
   $: shortZencardV2 = identities.zencard_v2
     ? `${identities.zencard_v2.substring(0, 8)}...${identities.zencard_v2.substring(identities.zencard_v2.length - 4)}`
     : null
-  $: udriveUrl = identities.ipns_vault
-    ? `${getIpfsGateway()}/ipns/${identities.ipns_vault.replace(/^\/?ipns\//, "").trim()}`
-    : null
+  $: udriveUrl =
+    identities.ipns_vault && identities.email
+      ? getUdriveBaseUrl(identities.ipns_vault, identities.email)
+      : null
 </script>
 
 {#if identities.g1pub || identities.g1v2 || identities.zencard}
@@ -308,13 +309,13 @@
           <Link
             external
             class="mt-3 block text-xs text-accent underline"
-            href="{getApiServerUrl()}/check_zencard?email={encodeURIComponent(identities.email)}">
+            href="{getApiUrl()}/check_zencard?email={encodeURIComponent(identities.email)}">
             {$_("zen.checkWallet")}
           </Link>
         {/if}
       </div>
     </Popover>
-    {#if identities.ipns_vault}
+    {#if identities.ipns_vault && identities.email}
       <Popover triggerType="mouseenter" opts={{hideOnClick: true}}>
         <div slot="trigger" class="flex cursor-pointer items-center gap-1">
           <i class="fa fa-hdd text-neutral-400" />

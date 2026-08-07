@@ -27,6 +27,7 @@
   import Nav from "src/app/Nav.svelte"
   import ForegroundButtons from "src/app/ForegroundButtons.svelte"
   import About from "src/app/views/About.svelte"
+  import FeedbackCreate from "src/app/views/FeedbackCreate.svelte"
   import Bech32Entity from "src/app/views/Bech32Entity.svelte"
   import ChannelCreate from "src/app/views/ChannelCreate.svelte"
   import ChannelsDetail from "src/app/views/ChannelsDetail.svelte"
@@ -106,6 +107,7 @@
   // Routes
 
   router.register("/about", About)
+  router.register("/feedback/create", FeedbackCreate)
   router.register("/search", Search)
 
   router.register("/channels", ChannelsList, {

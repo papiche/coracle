@@ -1,7 +1,6 @@
 <script lang="ts">
   import cx from "classnames"
-  import {formatTimestamp, now, MINUTE, HOUR, DAY} from "@welshman/lib"
-  import {getTagValue} from "@welshman/util"
+  import {formatTimestamp} from "@welshman/lib"
   import {PublishStatus} from "@welshman/net"
   import {abortThunk, session, thunkHasStatus, thunks} from "@welshman/app"
   import {fly} from "svelte/transition"
@@ -13,20 +12,11 @@
   import PersonCircle from "src/app/shared/PersonCircle.svelte"
   import PersonName from "src/app/shared/PersonName.svelte"
   import NoteInfo from "src/app/shared/NoteInfo.svelte"
+  import ExpirationBadge from "src/app/shared/ExpirationBadge.svelte"
   import {getMessageView, userSettings} from "src/engine"
   import {router} from "src/app/util/router"
 
   export let message
-
-  const formatTimeLeft = (seconds: number) => {
-    const delta = seconds - now()
-
-    if (delta <= 0) return "expired"
-    if (delta < HOUR) return `${Math.ceil(delta / MINUTE)}m`
-    if (delta < DAY) return `${Math.ceil(delta / HOUR)}h`
-
-    return `${Math.ceil(delta / DAY)}d`
-  }
 
   const deleteMessage = () =>
     router.at("notes").of(message.id).at("delete").qp({kind: message.kind}).open()
@@ -37,7 +27,6 @@
 
   $: thunk = $thunks.find(t => t.event.id === message.id)
   $: remaining = Math.ceil($userSettings.send_delay / 1000) - $elapsed
-  $: expiresAt = parseInt(getTagValue("expiration", message.tags) || "") || null
 </script>
 
 <div in:fly={{y: 20}} class="grid gap-2 py-1">
@@ -105,18 +94,7 @@
         {formatTimestamp(message.created_at)}
       {/if}
       <div class="flex items-center gap-3">
-        {#if expiresAt}
-          <Popover triggerType="mouseenter">
-            <i slot="trigger" class="fa fa-clock cursor-pointer text-neutral-400" />
-            <p slot="tooltip">
-              {#if expiresAt - now() > 0}
-                Expires in {formatTimeLeft(expiresAt)} ({formatTimestamp(expiresAt)})
-              {:else}
-                Expired {formatTimestamp(expiresAt)}
-              {/if}
-            </p>
-          </Popover>
-        {/if}
+        <ExpirationBadge tags={message.tags} />
         {#if message.pubkey === $session.pubkey}
           <i class="fa fa-trash cursor-pointer text-neutral-400" on:click={deleteMessage} />
         {/if}

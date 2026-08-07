@@ -241,15 +241,25 @@
     "runningBuild": "Running build {hash}",
     "supportDev": "Support development",
     "supportDevDescription": "All funds will be used to support server costs and development.",
-    "zapDeveloper": "Zap the developer",
+    "joinOpenCollective": "Support us on Open Collective",
     "getInTouch": "Get in touch",
     "getInTouchDescription": "Having problems? Let us know.",
     "openIssue": "Open an Issue",
-    "builtBy": "Built with 💜 by @",
+    "builtBy": "Built with 💜 by ",
+    "g1fablab": "your Ğ1FabLab",
     "sourceCode": "Source Code",
-    "website": "Website",
-    "devBlog": "Dev Blog",
-    "podcast": "Podcast"
+    "website": "Website"
+  },
+  "feedbackCreate": {
+    "title": "Send Feedback",
+    "issueTitle": "Title",
+    "issueTitlePlaceholder": "Short summary of the problem",
+    "issueDescription": "Description",
+    "issueDescriptionPlaceholder": "What happened? What did you expect?",
+    "send": "Send",
+    "sent": "Thanks! Your feedback was sent.",
+    "failed": "Failed to send feedback. Please try again later.",
+    "missingFields": "Please fill in both the title and description."
   },
   "userData": {
     "title": "Data",

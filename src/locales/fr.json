@@ -241,15 +241,25 @@
     "runningBuild": "Version {hash}",
     "supportDev": "Soutenir le developpement",
     "supportDevDescription": "Tous les fonds seront utilises pour les couts serveur et le developpement.",
-    "zapDeveloper": "Zapper le developpeur",
+    "joinOpenCollective": "Nous soutenir sur Open Collective",
     "getInTouch": "Nous contacter",
     "getInTouchDescription": "Un probleme ? Faites-le nous savoir.",
     "openIssue": "Ouvrir un ticket",
-    "builtBy": "Construit avec 💜 par @",
+    "builtBy": "Construit avec 💜 par ",
+    "g1fablab": "votre Ğ1FabLab",
     "sourceCode": "Code source",
-    "website": "Site web",
-    "devBlog": "Blog dev",
-    "podcast": "Podcast"
+    "website": "Site web"
+  },
+  "feedbackCreate": {
+    "title": "Envoyer un retour",
+    "issueTitle": "Titre",
+    "issueTitlePlaceholder": "Resume court du probleme",
+    "issueDescription": "Description",
+    "issueDescriptionPlaceholder": "Que s'est-il passe ? Qu'attendiez-vous ?",
+    "send": "Envoyer",
+    "sent": "Merci ! Votre retour a ete envoye.",
+    "failed": "Echec de l'envoi. Veuillez reessayer plus tard.",
+    "missingFields": "Merci de remplir le titre et la description."
   },
   "userData": {
     "title": "Donnees",

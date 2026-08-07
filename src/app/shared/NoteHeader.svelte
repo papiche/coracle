@@ -5,6 +5,7 @@
   import Button from "src/partials/Button.svelte"
   import PersonCircle from "src/app/shared/PersonCircle.svelte"
   import PersonName from "src/app/shared/PersonName.svelte"
+  import ExpirationBadge from "src/app/shared/ExpirationBadge.svelte"
   import {router} from "src/app/util"
 
   export let event: TrustedEvent
@@ -52,6 +53,7 @@
         <PersonName pubkey={event.pubkey} />
       </Button>
       <div class="flex items-center gap-3 pt-1 text-xs sm:pt-0">
+        <ExpirationBadge tags={event.tags} />
         <Button
           stopPropagation
           on:click={goToDetail}

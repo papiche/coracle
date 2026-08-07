@@ -16,20 +16,23 @@
   const profile = deriveProfile($pubkey)
 
   let manifest: UdriveManifest | null = null
-  let loading = true
-  let loadedVault: string | null = null
+  let loading = false
+  let loadedKey: string | null = null
 
-  // ipns_vault is only ever set as a NIP-39 "i" tag, never in the kind-0 JSON content
-  $: ipnsVault = extractIdentitiesFromTags($profile?.event?.tags || []).ipns_vault || null
+  // ipns_vault is only ever set as a NIP-39 "i" tag, never in the kind-0 JSON content;
+  // email may appear in either.
+  $: tagIdentities = extractIdentitiesFromTags($profile?.event?.tags || [])
+  $: ipnsVault = tagIdentities.ipns_vault || null
+  $: email = ($profile as any)?.email || tagIdentities.email || null
 
-  $: if (ipnsVault && ipnsVault !== loadedVault) {
-    load(ipnsVault)
+  $: if (ipnsVault && email && `${ipnsVault}:${email}` !== loadedKey) {
+    load(ipnsVault, email)
   }
 
-  const load = async (vault: string) => {
+  const load = async (vault: string, userEmail: string) => {
     loading = true
-    loadedVault = vault
-    manifest = await fetchUdriveManifest(vault)
+    loadedKey = `${vault}:${userEmail}`
+    manifest = await fetchUdriveManifest(vault, userEmail)
     loading = false
   }
 
@@ -47,7 +50,7 @@
   <h2 class="staatliches text-xl">{$_("udrive.browse")}</h2>
   {#if loading}
     <Spinner />
-  {:else if !ipnsVault}
+  {:else if !ipnsVault || !email}
     <p class="text-neutral-400">{$_("udrive.notConfigured")}</p>
   {:else if !manifest || manifest.files.length === 0}
     <p class="text-neutral-400">{$_("udrive.empty")}</p>

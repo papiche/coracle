@@ -12,6 +12,7 @@
   import RelayStatus from "src/app/shared/RelayStatus.svelte"
   import RelayCardActions from "src/app/shared/RelayCardActions.svelte"
   import {setMessagingPolicy, setOutboxPolicy} from "src/engine"
+  import {preferredRelayUrl} from "src/util/uplanet-detect"
   import {slide} from "svelte/transition"
   import Modal from "src/partials/Modal.svelte"
 
@@ -48,6 +49,12 @@
       setMessagingPolicy(url, !messaging)
     }
   }
+
+  const toggleApiStation = () => {
+    preferredRelayUrl.set($preferredRelayUrl === url ? null : url)
+  }
+
+  $: isApiStation = $preferredRelayUrl === url
 
   let details = false
 
@@ -181,6 +188,23 @@
           </div>
         </Popover>
       {/if}
+      <Popover triggerType="mouseenter" class="inline-block">
+        <div slot="trigger">
+          <Chip
+            pad
+            class={cx("cursor-pointer transition-opacity", {"opacity-50": !isApiStation})}
+            on:click={toggleApiStation}>
+            <i class="fa fa-satellite-dish text-neutral-300" /> Station API
+          </Chip>
+        </div>
+        <div slot="tooltip">
+          {#if isApiStation}
+            This is your preferred UPlanet API station (ZEN balances, feedback, uploads).
+          {:else}
+            Use this relay's station as your preferred UPlanet API, instead of auto-detecting one.
+          {/if}
+        </div>
+      </Popover>
     </div>
   {/if}
 </AltColor>

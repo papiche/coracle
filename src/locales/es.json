@@ -241,15 +241,25 @@
     "runningBuild": "Versión {hash}",
     "supportDev": "Apoyar el desarrollo",
     "supportDevDescription": "Todos los fondos se usarán para costes de servidor y desarrollo.",
-    "zapDeveloper": "Zapear al desarrollador",
+    "joinOpenCollective": "Apóyanos en Open Collective",
     "getInTouch": "Contactar",
     "getInTouchDescription": "¿Un problema? Haznos saber.",
     "openIssue": "Abrir un ticket",
-    "builtBy": "Construido con 💜 por @",
+    "builtBy": "Construido con 💜 por ",
+    "g1fablab": "tu Ğ1FabLab",
     "sourceCode": "Código fuente",
-    "website": "Sitio web",
-    "devBlog": "Blog dev",
-    "podcast": "Podcast"
+    "website": "Sitio web"
+  },
+  "feedbackCreate": {
+    "title": "Enviar comentarios",
+    "issueTitle": "Título",
+    "issueTitlePlaceholder": "Resumen breve del problema",
+    "issueDescription": "Descripción",
+    "issueDescriptionPlaceholder": "¿Qué pasó? ¿Qué esperabas?",
+    "send": "Enviar",
+    "sent": "¡Gracias! Tu comentario ha sido enviado.",
+    "failed": "No se pudo enviar. Inténtalo de nuevo más tarde.",
+    "missingFields": "Por favor completa el título y la descripción."
   },
   "userData": {
     "title": "Datos",

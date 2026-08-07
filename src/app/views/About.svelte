@@ -1,20 +1,40 @@
 <script lang="ts">
+  import {onMount} from "svelte"
   import {_} from "svelte-i18n"
-  import {tagZapSplit} from "@welshman/app"
   import Popover from "src/partials/Popover.svelte"
   import Link from "src/partials/Link.svelte"
   import Button from "src/partials/Button.svelte"
   import FlexColumn from "src/partials/FlexColumn.svelte"
   import Card from "src/partials/Card.svelte"
   import Heading from "src/partials/Heading.svelte"
-  import {router, zap} from "src/app/util"
+  import {router} from "src/app/util"
   import {loadPubkeys, env} from "src/engine"
+  import {resolveApiUrl} from "src/util/uplanet-detect"
 
   const hash = import.meta.env.VITE_BUILD_HASH
-  const hodlbodPubkey = "97c70a44366a6535c145b333f973ea86dfdc2d7a99da618c40c64705ad98e322"
-  const startZap = () => zap({splits: [tagZapSplit(env.PLATFORM_PUBKEY)]})
+  const openFeedbackForm = () => router.at("feedback/create").open()
 
-  loadPubkeys([env.PLATFORM_PUBKEY])
+  // Falls back to the build's configured platform pubkey if this station
+  // isn't UPlanet, or /api/nostr/admin/captain_info is unreachable.
+  let builtByPubkey = env.PLATFORM_PUBKEY
+
+  onMount(async () => {
+    try {
+      const apiUrl = await resolveApiUrl()
+      const res = await fetch(`${apiUrl}/api/nostr/admin/captain_info`)
+
+      if (res.ok) {
+        const data = await res.json()
+        if (data.captain_hex) {
+          builtByPubkey = data.captain_hex
+        }
+      }
+    } catch (err) {
+      // not on an UPlanet station, or the API is unreachable — keep the fallback
+    }
+
+    loadPubkeys([builtByPubkey])
+  })
 
   document.title = $_("about.title")
 </script>
@@ -33,7 +53,12 @@
         <h3 class="text-xl sm:h-12">{$_("about.supportDev")}</h3>
         <p class="sm:h-20">{$_("about.supportDevDescription")}</p>
         <div class="flex justify-center">
-          <Button class="btn btn-accent" on:click={startZap}>{$_("about.zapDeveloper")}</Button>
+          <Link
+            class="btn btn-accent"
+            external
+            href="https://opencollective.com/monnaie-libre/contribute">
+            {$_("about.joinOpenCollective")}
+          </Link>
         </div>
       </FlexColumn>
     </Card>
@@ -42,12 +67,9 @@
         <h3 class="text-xl sm:h-12">{$_("about.getInTouch")}</h3>
         <p class="sm:h-20">{$_("about.getInTouchDescription")}</p>
         <div class="flex justify-center">
-          <Link
-            class="btn btn-accent"
-            external
-            href="https://github.com/coracle-social/coracle/issues/new">
+          <Button class="btn btn-accent" on:click={openFeedbackForm}>
             {$_("about.openIssue")}
-          </Link>
+          </Button>
         </div>
       </FlexColumn>
     </Card>
@@ -57,7 +79,7 @@
       {$_("about.builtBy")}<Link
         modal
         class="underline"
-        href={router.at("people").of(hodlbodPubkey).toString()}>hodlbod</Link>
+        href={router.at("people").of(builtByPubkey).toString()}>{$_("about.g1fablab")}</Link>
     </p>
     <p class="flex justify-center gap-4">
       <Popover triggerType="mouseenter">
@@ -74,20 +96,6 @@
           </Link>
         </div>
         <div slot="tooltip">{$_("about.website")}</div>
-      </Popover>
-      <Popover triggerType="mouseenter">
-        <div slot="trigger">
-          <Link external href="https://hodlbod.npub.pro/"><i class="fa fa-pen-clip" /></Link>
-        </div>
-        <div slot="tooltip">{$_("about.devBlog")}</div>
-      </Popover>
-      <Popover triggerType="mouseenter">
-        <div slot="trigger">
-          <Link external href="https://fountain.fm/show/vnmoRQQ50siLFRE8k061">
-            <i class="fa fa-rss" />
-          </Link>
-        </div>
-        <div slot="tooltip">{$_("about.podcast")}</div>
       </Popover>
     </p>
   </div>

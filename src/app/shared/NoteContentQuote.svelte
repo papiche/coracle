@@ -8,6 +8,7 @@
   import Card from "src/partials/Card.svelte"
   import Spinner from "src/partials/Spinner.svelte"
   import PersonCircle from "src/app/shared/PersonCircle.svelte"
+  import ExpirationBadge from "src/app/shared/ExpirationBadge.svelte"
   import {router} from "src/app/util/router"
   import {isEventMuted, deriveEvent} from "src/engine"
 
@@ -54,16 +55,19 @@
     </p>
   {:else if $quote}
     {#if !headerlessKinds.includes($quote.kind)}
-      <div class="mb-4 flex items-center gap-4">
-        <PersonCircle class="h-6 w-6" pubkey={$quote.pubkey} />
-        <Link
-          modal
-          stopPropagation
-          type="unstyled"
-          class="flex items-center gap-2"
-          href={router.at("people").of($quote.pubkey).toString()}>
-          <h2 class="text-lg">{$profileDisplay}</h2>
-        </Link>
+      <div class="mb-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <PersonCircle class="h-6 w-6" pubkey={$quote.pubkey} />
+          <Link
+            modal
+            stopPropagation
+            type="unstyled"
+            class="flex items-center gap-2"
+            href={router.at("people").of($quote.pubkey).toString()}>
+            <h2 class="text-lg">{$profileDisplay}</h2>
+          </Link>
+        </div>
+        <ExpirationBadge tags={$quote.tags} />
       </div>
     {/if}
     <slot name="note-content" quote={$quote} {depth} />

@@ -136,7 +136,7 @@ import {SearchHelper, fromCsv, parseJson, ensureProto} from "src/util/misc"
 import {appDataKeys} from "src/util/nostr"
 import {readable, derived, writable} from "svelte/store"
 
-import {detectUPlanetServices, verifyUPlanetServices} from "src/util/uplanet-detect"
+import {detectUPlanetServices, initUPlanetServices} from "src/util/uplanet-detect"
 import {
   parseUplanetEnvelope,
   displayUplanetChannel,
@@ -928,10 +928,10 @@ if (!initialized) {
   // Configure app
   appContext.dufflepudUrl = env.DUFFLEPUD_URL
 
-  // Verify UPlanet API (for upload/NIP-96). Relay stays regardless — WebSocket doesn't need CORS.
-  if (uplanet) {
-    verifyUPlanetServices(uplanet)
-  }
+  // Verify UPlanet API (for upload/NIP-96), preferring the user's chosen relay
+  // ("Vos relais") over hostname auto-detection. Relay stays regardless —
+  // WebSocket doesn't need CORS.
+  initUPlanetServices()
 
   // Configure router
   routerContext.getDefaultRelays = always(env.DEFAULT_RELAYS)

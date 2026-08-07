@@ -7,6 +7,7 @@
   import {imgproxy} from "src/engine"
   import {router} from "src/app/util/router"
   import {resolveIpfsUrl} from "src/util/ipfs"
+  import ExpirationBadge from "src/app/shared/ExpirationBadge.svelte"
 
   export let event: TrustedEvent
 
@@ -27,7 +28,8 @@
   const thumbUrl = resolveIpfsUrl(rawThumbUrl)
   const gifanimUrl = resolveIpfsUrl(rawGifanimUrl)
   const duration = parseInt(findTag(["duration"]) || "0")
-  const description = findTag(["description", "summary", "alt"]) || event.content?.slice(0, 200) || ""
+  const description =
+    findTag(["description", "summary", "alt"]) || event.content?.slice(0, 200) || ""
   const isShort = event.kind === 22 || duration <= 60
   const sourceType = (() => {
     const src = event.tags.find(t => t[0] === "i" && t[1]?.startsWith("source:"))
@@ -89,7 +91,11 @@
       const pubkey = (event.pubkey ?? "").toLowerCase()
 
       if (!isValidHex64(id) || !isValidHex64(pubkey)) {
-        console.warn("VideoCard: invalid event id or pubkey, skipping navigation", rawId, event.pubkey)
+        console.warn(
+          "VideoCard: invalid event id or pubkey, skipping navigation",
+          rawId,
+          event.pubkey,
+        )
         return
       }
 
@@ -175,19 +181,19 @@
   <!-- Info below thumbnail (YouTube-style) -->
   <div class="flex flex-col gap-0.5 py-2 text-left">
     <!-- Title (2 lines max) -->
-    <span class="line-clamp-2 text-sm font-medium leading-snug text-neutral-100 group-hover:text-white">
+    <span
+      class="line-clamp-2 text-sm font-medium leading-snug text-neutral-100 group-hover:text-white">
       {title}
     </span>
 
     <!-- Author + date -->
     <div class="flex items-center gap-1.5 text-xs text-neutral-400">
-      <button
-        class="truncate hover:text-accent transition-colors"
-        on:click={openProfile}>
+      <button class="truncate transition-colors hover:text-accent" on:click={openProfile}>
         {authorDisplay}
       </button>
       <span>·</span>
       <span class="shrink-0">{formatDate(event.created_at)}</span>
+      <ExpirationBadge tags={event.tags} />
       {#if sourceType}
         <span>·</span>
         <span

@@ -9,6 +9,7 @@
   import {createScroller} from "src/util/misc"
   import {fly} from "src/util/transition"
   import Feed from "src/app/shared/Feed.svelte"
+  import ExpirationBadge from "src/app/shared/ExpirationBadge.svelte"
   import Tabs from "src/partials/Tabs.svelte"
   import Button from "src/partials/Button.svelte"
   import Spinner from "src/partials/Spinner.svelte"
@@ -51,8 +52,18 @@
           : undefined
 
   $: feed = authors
-    ? {title: "Blogs", identifier: "blogs", description: "Blog feed", definition: makeIntersectionFeed(makeKindFeed(LONG_FORM), makeAuthorFeed(...authors))}
-    : {title: "Blogs", identifier: "blogs", description: "Blog feed", definition: makeIntersectionFeed(makeKindFeed(LONG_FORM))}
+    ? {
+        title: "Blogs",
+        identifier: "blogs",
+        description: "Blog feed",
+        definition: makeIntersectionFeed(makeKindFeed(LONG_FORM), makeAuthorFeed(...authors)),
+      }
+    : {
+        title: "Blogs",
+        identifier: "blogs",
+        description: "Blog feed",
+        definition: makeIntersectionFeed(makeKindFeed(LONG_FORM)),
+      }
 
   const loadGridEvents = () => {
     gridAbort.abort()
@@ -179,10 +190,9 @@
 
       <!-- Write button (only for signed-in users) -->
       {#if $signer}
-        <Button
-          class="btn btn-accent"
-          on:click={() => router.at("blog/create").go()}>
-          <i class="fa fa-pen" /> {$_("blog.write") || "Écrire"}
+        <Button class="btn btn-accent" on:click={() => router.at("blog/create").go()}>
+          <i class="fa fa-pen" />
+          {$_("blog.write") || "Écrire"}
         </Button>
       {/if}
     </div>
@@ -246,9 +256,8 @@
         {@const tags = getTagValues("t", event.tags)}
         <div in:fly={{y: 20}}>
           <button
-            class="group flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-xl border border-transparent bg-neutral-900 text-left transition-all hover:border-accent hover:-translate-y-0.5"
+            class="group flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-xl border border-transparent bg-neutral-900 text-left transition-all hover:-translate-y-0.5 hover:border-accent"
             on:click={() => router.at("notes").of(event.id).open()}>
-
             <!-- Cover image -->
             {#if image}
               <div class="aspect-video w-full overflow-hidden bg-neutral-800">
@@ -258,14 +267,16 @@
                   class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105" />
               </div>
             {:else}
-              <div class="flex aspect-video w-full items-center justify-center bg-neutral-800 text-4xl text-neutral-600">
+              <div
+                class="flex aspect-video w-full items-center justify-center bg-neutral-800 text-4xl text-neutral-600">
                 <i class="fa fa-newspaper" />
               </div>
             {/if}
 
             <!-- Article info -->
             <div class="flex flex-1 flex-col gap-1.5 p-3">
-              <h3 class="line-clamp-2 text-sm font-semibold leading-snug text-neutral-100 group-hover:text-white">
+              <h3
+                class="line-clamp-2 text-sm font-semibold leading-snug text-neutral-100 group-hover:text-white">
                 {title}
               </h3>
 
@@ -277,19 +288,26 @@
 
               <div class="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
                 <span class="text-[10px] text-neutral-600">{formatDate(event.created_at)}</span>
+                <ExpirationBadge tags={event.tags} />
                 {#if event.pubkey === $pubkey}
-                  <span class="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] text-accent">
+                  <span class="bg-accent/20 rounded-full px-1.5 py-0.5 text-[10px] text-accent">
                     {$_("blog.myArticle") || "Mon article"}
                   </span>
                   <!-- Edit button for own articles -->
                   <button
                     class="ml-auto rounded border border-neutral-700 px-2 py-0.5 text-[10px] text-neutral-400 transition-all hover:border-accent hover:text-accent"
-                    on:click|stopPropagation={() => router.at("blog/create").qp({address: `30023:${event.pubkey}:${getTagValue("d", event.tags)}`}).go()}>
-                    <i class="fa fa-edit" /> {$_("blog.edit") || "Modifier"}
+                    on:click|stopPropagation={() =>
+                      router
+                        .at("blog/create")
+                        .qp({address: `30023:${event.pubkey}:${getTagValue("d", event.tags)}`})
+                        .go()}>
+                    <i class="fa fa-edit" />
+                    {$_("blog.edit") || "Modifier"}
                   </button>
                 {/if}
                 {#each tags.slice(0, 2) as tag}
-                  <span class="rounded-full bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-500">
+                  <span
+                    class="rounded-full bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-500">
                     #{tag}
                   </span>
                 {/each}
@@ -309,19 +327,17 @@
         <i class="fa fa-feather-alt mb-3 text-5xl text-neutral-700" />
         <p class="text-neutral-400">
           {activeTab === "📝"
-            ? ($_("blog.noMyArticles") || "Vous n'avez pas encore écrit d'articles.")
-            : ($_("feed.empty") || "Aucun article trouvé.")}
+            ? $_("blog.noMyArticles") || "Vous n'avez pas encore écrit d'articles."
+            : $_("feed.empty") || "Aucun article trouvé."}
         </p>
         {#if $signer && activeTab === "📝"}
-          <Button
-            class="btn btn-accent mt-4"
-            on:click={() => router.at("blog/create").go()}>
-            <i class="fa fa-pen" /> {$_("blog.writeFirst") || "Écrire mon premier article"}
+          <Button class="btn btn-accent mt-4" on:click={() => router.at("blog/create").go()}>
+            <i class="fa fa-pen" />
+            {$_("blog.writeFirst") || "Écrire mon premier article"}
           </Button>
         {/if}
       </div>
     {/if}
-
   {:else}
     <!-- List mode: use Feed component -->
     {#key `${activeTab}-list`}

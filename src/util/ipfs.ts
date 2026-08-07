@@ -6,13 +6,19 @@
  * HTTP URLs routed through the correct IPFS gateway.
  *
  * Gateway selection logic (mirrors youtube.enhancements.js):
+ *   • chosen/detected UPlanet API station (src/util/uplanet-detect.ts) → its
+ *     matching IPFS gateway, regardless of where coracle itself is hosted
  *   • localhost / 127.0.0.1   → http://127.0.0.1:8080
  *   • ipfs.<domain>           → same proto + same host  (e.g. ipfs.copylaradio.com)
  *   • u.<domain>              → ipfs.<domain> (UPlanet subdomain convention)
  *   • anything else           → https://ipfs.copylaradio.com (production fallback)
  */
+import {getPreferredIpfsGateway} from "src/util/uplanet-detect"
 
 export const getIpfsGateway = (): string => {
+  const preferred = getPreferredIpfsGateway()
+  if (preferred) return preferred
+
   if (typeof window === "undefined") return "https://ipfs.copylaradio.com"
   const {hostname, protocol} = window.location
   const proto = protocol.replace(":", "")
