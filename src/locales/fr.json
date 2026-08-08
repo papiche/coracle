@@ -225,7 +225,10 @@
     "otherRelaysDescription": "Voici des relais utilises par les personnes de votre reseau. Les ajouter peut ameliorer votre capacite a charger les profils et le contenu.",
     "searchPlaceholder": "Rechercher des relais ou ajouter une URL personnalisee",
     "addRelayTitle": "Ajouter un relais",
-    "addRelayDescription": "Entrez une URL de relais ci-dessous pour l'ajouter a votre selection de relais."
+    "addRelayDescription": "Entrez une URL de relais ci-dessous pour l'ajouter a votre selection de relais.",
+    "usingHomeStation": "Utilise votre station d'attache : {url}",
+    "usingDetectedStation": "Utilise la station detectee : {url}",
+    "usingDefaultStation": "Aucune station UPlanet detectee — utilise la station publique par defaut : {url}"
   },
   "feedControls": {
     "customize": "Personnaliser",

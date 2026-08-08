@@ -24,6 +24,7 @@
     RelayMode,
   } from "@welshman/util"
   import {createScroller} from "src/util/misc"
+  import {preferredRelayUrl, getApiUrlWithSource} from "src/util/uplanet-detect"
   import {showWarning} from "src/partials/Toast.svelte"
   import Tabs from "src/partials/Tabs.svelte"
   import Modal from "src/partials/Modal.svelte"
@@ -112,12 +113,15 @@
   let activeTab = "search"
   let customRelay = ""
   let currentRelayUrls: string[] = []
+  let apiStatus = getApiUrlWithSource()
 
   $: currentRelayUrls = uniq([
     ...currentRelayUrls,
     ...getRelaysFromList($userRelayList),
     ...getRelaysFromList($userMessagingRelayList),
   ]).sort()
+
+  $: if ($preferredRelayUrl || true) apiStatus = getApiUrlWithSource()
 
   $: ratings = groupBy(e => {
     try {
@@ -159,12 +163,25 @@
       <h2 class="staatliches text-2xl">{$_("relayList.yourRelays")}</h2>
     </div>
     <Button class="btn btn-accent" on:click={addCustomRelay}>
-      <i class="fa-solid fa-compass" /> {$_("relayList.addRelay")}
+      <i class="fa-solid fa-compass" />
+      {$_("relayList.addRelay")}
     </Button>
   </div>
   <p>
     {$_("relayList.relaysDescription")}
   </p>
+  {#if !$preferredRelayUrl}
+    <div class="flex items-center gap-2 rounded bg-neutral-800 p-3 text-sm text-neutral-300">
+      <i class="fa fa-satellite-dish text-neutral-400" />
+      {#if apiStatus.source === "home"}
+        {$_("relayList.usingHomeStation", {values: {url: apiStatus.url}})}
+      {:else if apiStatus.source === "detected"}
+        {$_("relayList.usingDetectedStation", {values: {url: apiStatus.url}})}
+      {:else}
+        {$_("relayList.usingDefaultStation", {values: {url: apiStatus.url}})}
+      {/if}
+    </div>
+  {/if}
   {#if currentRelayUrls.length === 0}
     <div class="mt-8 flex items-center justify-center gap-2 text-center">
       <i class="fa fa-triangle-exclamation" />
@@ -211,6 +228,7 @@
     <Input autofocus bind:value={customRelay} placeholder="wss://...">
       <i slot="before" class="fa fa-server" />
     </Input>
-    <Button class="btn btn-accent" on:click={confirmAddCustomRelay}>{$_("relayList.addRelay")}</Button>
+    <Button class="btn btn-accent" on:click={confirmAddCustomRelay}
+      >{$_("relayList.addRelay")}</Button>
   </Modal>
 {/if}

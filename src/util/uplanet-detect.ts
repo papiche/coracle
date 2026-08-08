@@ -4,9 +4,11 @@
 //   - resolveApiUrl()/getApiUrl(): "give me a UPlanet API URL that works" (always
 //     returns something, falling back to a public station) — used by ZEN balance
 //     checks and the feedback form, which need an endpoint regardless of context.
-// Both respect the user's preferred relay ("Vos relais"), which overrides auto-detection.
+// Priority for both: explicit user preference ("Vos relais") → the logged-in
+// user's own home station (profile's ipfs_gw tag) → hostname auto-detection → default.
 import {get} from "svelte/store"
 import {synced, localStorageProvider} from "@welshman/store"
+import {pubkey, deriveProfile, getProfile} from "@welshman/app"
 import logger from "src/util/logger"
 
 export interface UPlanetServices {
@@ -15,6 +17,8 @@ export interface UPlanetServices {
   uploadUrl: string
   isLocal: boolean
 }
+
+export type ApiUrlSource = "preferred" | "home" | "detected" | "default"
 
 export const DEFAULT_API_URL = "https://u.copylaradio.com"
 
@@ -67,6 +71,73 @@ export const servicesFromRelayUrl = (relayUrl: string): UPlanetServices | null =
   }
 
   return null
+}
+
+/**
+ * Derive {relayUrl, apiUrl, uploadUrl, isLocal} from an IPFS gateway URL
+ * (e.g. a profile's ipfs_gw tag), mirroring the same convention in reverse:
+ * ipfs.<domain> <-> u.<domain>/relay.<domain>, or port 8080 <-> 54321/7777.
+ */
+const servicesFromIpfsGateway = (gatewayUrl: string): UPlanetServices | null => {
+  try {
+    const url = new URL(gatewayUrl)
+    const wsProto = url.protocol === "https:" ? "wss" : "ws"
+
+    if (url.hostname.startsWith("ipfs.")) {
+      const domain = url.hostname.slice(5)
+      const apiUrl = `${url.protocol}//u.${domain}`
+
+      return {
+        relayUrl: `${wsProto}://relay.${domain}`,
+        apiUrl,
+        uploadUrl: `${apiUrl}/api/upload/image`,
+        isLocal: false,
+      }
+    }
+
+    if (url.port === "8080") {
+      const apiUrl = `${url.protocol}//${url.hostname}:54321`
+
+      return {
+        relayUrl: `${wsProto}://${url.hostname}:7777`,
+        apiUrl,
+        uploadUrl: `${apiUrl}/api/upload/image`,
+        isLocal: isPrivateIP(url.hostname),
+      }
+    }
+  } catch {
+    // invalid URL
+  }
+
+  return null
+}
+
+/** Read a NIP-39 "i" tag value (e.g. "ipfs_gw:https://ipfs.example.com") from the
+ * logged-in user's own profile — the only place fields like ipfs_gw ever live. */
+const getOwnProfileTagValue = (key: string): string | null => {
+  const $pubkey = get(pubkey)
+  if (!$pubkey) return null
+
+  const profile = getProfile($pubkey)
+  const prefix = `${key}:`
+
+  for (const tag of profile?.event?.tags || []) {
+    if (tag[0] === "i" && typeof tag[1] === "string" && tag[1].startsWith(prefix)) {
+      return tag[1].slice(prefix.length)
+    }
+  }
+
+  return null
+}
+
+/**
+ * The logged-in user's own home station, derived from their profile's
+ * ipfs_gw tag (kept current by Astroport.ONE's NOSTRCARD.refresh.sh — see
+ * Astroport.ONE/docs/reference/IDENTITY_MULTIPASS.md for the home_station field).
+ */
+const getHomeStationServices = (): UPlanetServices | null => {
+  const gw = getOwnProfileTagValue("ipfs_gw")
+  return gw ? servicesFromIpfsGateway(gw) : null
 }
 
 export function detectUPlanetServices(): UPlanetServices | null {
@@ -129,14 +200,20 @@ export function getVerifiedUPlanet(): UPlanetServices | null {
 }
 
 /**
- * Detect + verify UPlanet services, preferring the user's manually chosen relay
- * over hostname auto-detection, and re-checking whenever that preference changes.
+ * Detect + verify UPlanet services, following the shared priority order
+ * (preferred relay → home station → hostname auto-detection), and re-checking
+ * whenever the preference or the logged-in user's own profile changes.
  * Call once at app startup.
  */
 export function initUPlanetServices(): void {
+  let unsubProfile: (() => void) | null = null
+
   const check = () => {
     const preferred = get(preferredRelayUrl)
-    const services = (preferred && servicesFromRelayUrl(preferred)) || detectUPlanetServices()
+    const services =
+      (preferred && servicesFromRelayUrl(preferred)) ||
+      getHomeStationServices() ||
+      detectUPlanetServices()
 
     if (services) {
       verifyUPlanetServices(services)
@@ -147,6 +224,13 @@ export function initUPlanetServices(): void {
 
   check()
   preferredRelayUrl.subscribe(check)
+
+  // The user's profile (and its ipfs_gw tag) usually loads asynchronously
+  // after this module first runs — re-check once it (or a later pubkey) arrives.
+  pubkey.subscribe($pubkey => {
+    unsubProfile?.()
+    unsubProfile = $pubkey ? deriveProfile($pubkey).subscribe(check) : null
+  })
 }
 
 // ── Always-usable API URL (merged from src/util/zen.ts) ─────────────────────
@@ -190,8 +274,32 @@ const resolveFallbackApiUrl = async (): Promise<string> => {
 }
 
 /**
- * Resolve a UPlanet API URL that's always usable: explicit user preference →
+ * Resolve {url, source} following: explicit preference → home station →
  * detected + health-checked station → public default (u.copylaradio.com).
+ * Synchronous — no live health check for the "detected" tier (uses whatever
+ * was last resolved by resolveApiUrl(), if anything). Prefer resolveApiUrl()
+ * when an async context is available.
+ */
+export function getApiUrlWithSource(): {url: string; source: ApiUrlSource} {
+  const preferred = get(preferredRelayUrl)
+
+  if (preferred) {
+    const services = servicesFromRelayUrl(preferred)
+    if (services) return {url: services.apiUrl, source: "preferred"}
+  }
+
+  const home = getHomeStationServices()
+  if (home) return {url: home.apiUrl, source: "home"}
+
+  const detected = detectUPlanetServices()?.apiUrl
+  if (detected) return {url: _cachedFallback || detected, source: "detected"}
+
+  return {url: _cachedFallback || DEFAULT_API_URL, source: "default"}
+}
+
+/**
+ * Resolve a UPlanet API URL that's always usable: explicit user preference →
+ * home station → detected + health-checked station → public default.
  * Prefer this over getApiUrl() whenever an async context is available.
  */
 export async function resolveApiUrl(): Promise<string> {
@@ -202,6 +310,9 @@ export async function resolveApiUrl(): Promise<string> {
     if (services) return services.apiUrl
   }
 
+  const home = getHomeStationServices()
+  if (home) return home.apiUrl
+
   return resolveFallbackApiUrl()
 }
 
@@ -210,16 +321,7 @@ export async function resolveApiUrl(): Promise<string> {
  * can't await, e.g. template hrefs. Prefer resolveApiUrl() when possible.
  */
 export function getApiUrl(): string {
-  const preferred = get(preferredRelayUrl)
-
-  if (preferred) {
-    const services = servicesFromRelayUrl(preferred)
-    if (services) return services.apiUrl
-  }
-
-  if (_cachedFallback) return _cachedFallback
-
-  return detectUPlanetServices()?.apiUrl || DEFAULT_API_URL
+  return getApiUrlWithSource().url
 }
 
 /** Derive an IPFS gateway URL from a UPlanet API URL: u.<domain> -> ipfs.<domain>, :54321 -> :8080. */
@@ -243,27 +345,13 @@ export const apiUrlToIpfsGateway = (apiUrl: string): string | null => {
 
 /**
  * IPFS gateway matching the chosen/detected UPlanet API station (preferred
- * relay first, then hostname auto-detection) — so CIDs (videos, images...)
- * resolve through the same station regardless of where coracle itself is
- * hosted. Returns null if no UPlanet station is known, for callers to fall
- * back to their own default.
+ * relay → home station → hostname auto-detection) — so CIDs (videos,
+ * images...) resolve through the same station regardless of where coracle
+ * itself is hosted. Returns null only when nothing but the public default is
+ * known, so callers can fall back to their own default gateway string.
  */
 export function getPreferredIpfsGateway(): string | null {
-  const preferred = get(preferredRelayUrl)
+  const {url, source} = getApiUrlWithSource()
 
-  if (preferred) {
-    const services = servicesFromRelayUrl(preferred)
-    if (services) {
-      const gw = apiUrlToIpfsGateway(services.apiUrl)
-      if (gw) return gw
-    }
-  }
-
-  const detected = detectUPlanetServices()
-  if (detected) {
-    const gw = apiUrlToIpfsGateway(detected.apiUrl)
-    if (gw) return gw
-  }
-
-  return null
+  return source === "default" ? null : apiUrlToIpfsGateway(url)
 }

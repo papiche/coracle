@@ -225,7 +225,10 @@
     "otherRelaysDescription": "Aquí hay relés usados por personas de tu red. Añadirlos puede mejorar tu capacidad para cargar perfiles y contenido.",
     "searchPlaceholder": "Buscar relés o añadir una URL personalizada",
     "addRelayTitle": "Añadir un relé",
-    "addRelayDescription": "Introduce una URL de relé a continuación para añadirla a tu selección."
+    "addRelayDescription": "Introduce una URL de relé a continuación para añadirla a tu selección.",
+    "usingHomeStation": "Usando tu estación de origen: {url}",
+    "usingDetectedStation": "Usando la estación detectada: {url}",
+    "usingDefaultStation": "Ninguna estación UPlanet detectada — usando la estación pública por defecto: {url}"
   },
   "feedControls": {
     "customize": "Personalizar",

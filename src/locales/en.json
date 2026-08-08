@@ -225,7 +225,10 @@
     "otherRelaysDescription": "Below are relays used by people in your network. Adding these may improve your ability to load profiles and content.",
     "searchPlaceholder": "Search relays or add a custom url",
     "addRelayTitle": "Add a relay",
-    "addRelayDescription": "Enter a relay url below to add it to your relay selections."
+    "addRelayDescription": "Enter a relay url below to add it to your relay selections.",
+    "usingHomeStation": "Using your home station: {url}",
+    "usingDetectedStation": "Using the detected station: {url}",
+    "usingDefaultStation": "No UPlanet station detected — using the public default: {url}"
   },
   "feedControls": {
     "customize": "Customize",
