@@ -488,7 +488,14 @@
     "claimOptional": "Code (optionnel)",
     "addPeople": "Ajouter des personnes",
     "addRelays": "Ajouter des relais",
-    "createLink": "Creer le lien d'invitation"
+    "createLink": "Creer le lien d'invitation",
+    "email": "Email",
+    "emailDescription": "Preparez un message pour inviter un ami a rejoindre la cooperative UPlanet Ẑen — copiez-le dans votre client email, ou ouvrez-le directement.",
+    "addEmail": "Ajouter un email",
+    "emailSubject": "Rejoins-moi sur UPlanet Ẑen 🌍",
+    "emailBody": "Salut,\n\nJe t'invite a rejoindre UPlanet, un reseau cooperatif construit sur le protocole ouvert NOSTR et la monnaie libre Ğ1.\n\nEn creant ton MULTIPASS (ton identite numerique, gratuite et que tu controles toi-meme), tu peux :\n- Publier et echanger librement, sans dependre d'une plateforme centralisee\n- Acceder a ton propre espace de stockage (uDRIVE) et a une IA locale (BRO)\n- Participer a la gouvernance de la cooperative\n\nCree ton compte ici : {url}\n\nA bientot !\n{name}",
+    "openInMailClient": "Ouvrir dans mon client mail",
+    "copied": "Copie dans le presse-papiers !"
   },
   "inviteAccept": {
     "title": "Vous avez ete invite",

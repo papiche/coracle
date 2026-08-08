@@ -1,6 +1,6 @@
 <script lang="ts">
   import {_} from "svelte-i18n"
-  import {relaySearch} from "@welshman/app"
+  import {relaySearch, pubkey, deriveProfileDisplay} from "@welshman/app"
   import {identity, without} from "@welshman/lib"
   import {displayRelayUrl} from "@welshman/util"
   import PersonSelect from "src/app/shared/PersonSelect.svelte"
@@ -10,16 +10,48 @@
   import FlexColumn from "src/partials/FlexColumn.svelte"
   import Heading from "src/partials/Heading.svelte"
   import Input from "src/partials/Input.svelte"
+  import Link from "src/partials/Link.svelte"
   import ListItem from "src/partials/ListItem.svelte"
   import SearchSelect from "src/partials/SearchSelect.svelte"
   import Subheading from "src/partials/Subheading.svelte"
+  import Textarea from "src/partials/Textarea.svelte"
   import {pickVals, toSpliced} from "src/util/misc"
+  import {copyToClipboard} from "src/util/html"
+  import {showInfo} from "src/partials/Toast.svelte"
+  import {getIpfsGateway} from "src/util/ipfs"
   import {onMount} from "svelte"
 
   export let initialPubkey = null
 
+  const keygenUrl = `${getIpfsGateway()}/ipns/copylaradio.com/g1.html`
+  const senderName = deriveProfileDisplay($pubkey)
+
+  let emailSubject = ""
+  let emailBody = ""
+
+  const initEmailDraft = () => {
+    emailSubject = $_("inviteCreate.emailSubject")
+    emailBody = $_("inviteCreate.emailBody", {values: {url: keygenUrl, name: $senderName}})
+  }
+
+  $: mailtoHref = `mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
+
+  const copySubject = () => {
+    copyToClipboard(emailSubject)
+    showInfo($_("inviteCreate.copied"))
+  }
+
+  const copyBody = () => {
+    copyToClipboard(emailBody)
+    showInfo($_("inviteCreate.copied"))
+  }
+
   const showSection = section => {
     sections = [...sections, section]
+
+    if (section === "email" && !emailBody) {
+      initEmailDraft()
+    }
   }
 
   const hideSection = section => {
@@ -127,14 +159,42 @@
         </SearchSelect>
       </FlexColumn>
     </Card>
+  {:else if section === "email"}
+    <Card>
+      <FlexColumn>
+        <div class="flex justify-between">
+          <Subheading>{$_("inviteCreate.email")}</Subheading>
+          <i class="fa fa-times cursor-pointer" on:click={() => hideSection("email")} />
+        </div>
+        <p>{$_("inviteCreate.emailDescription")}</p>
+        <div class="flex items-end gap-2">
+          <Input bind:value={emailSubject} class="flex-grow" />
+          <Button on:click={copySubject}><i class="fa fa-copy" /></Button>
+        </div>
+        <div class="flex items-end gap-2">
+          <Textarea bind:value={emailBody} class="flex-grow" rows={10} />
+          <Button on:click={copyBody}><i class="fa fa-copy" /></Button>
+        </div>
+        <Link class="btn btn-accent" external href={mailtoHref}>
+          <i class="fa fa-envelope" />
+          {$_("inviteCreate.openInMailClient")}
+        </Link>
+      </FlexColumn>
+    </Card>
   {/if}
 {/each}
 <div class="flex justify-end gap-4">
   <Button disabled={sections.includes("people")} on:click={() => showSection("people")}>
-    <i class="fa fa-plus" /> {$_("inviteCreate.addPeople")}
+    <i class="fa fa-plus" />
+    {$_("inviteCreate.addPeople")}
   </Button>
   <Button disabled={sections.includes("relays")} on:click={() => showSection("relays")}>
-    <i class="fa fa-plus" /> {$_("inviteCreate.addRelays")}
+    <i class="fa fa-plus" />
+    {$_("inviteCreate.addRelays")}
+  </Button>
+  <Button disabled={sections.includes("email")} on:click={() => showSection("email")}>
+    <i class="fa fa-plus" />
+    {$_("inviteCreate.addEmail")}
   </Button>
 </div>
 <Button class="btn btn-accent" disabled={[...pubkeys, ...relays].length === 0} on:click={onSubmit}>
