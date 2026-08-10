@@ -18,11 +18,15 @@
   }
 
   onMount(() => {
-    if (threshold < 1) {
+    if (threshold < 1 && getSetting("dufflepud_url")) {
       for (const url of urls) {
-        postJson(dufflepud("media/alert"), {url}).then(({score = 0}) => {
-          maxScore = Math.max(score, maxScore)
-        })
+        postJson(dufflepud("media/alert"), {url})
+          .then(({score = 0}) => {
+            maxScore = Math.max(score, maxScore)
+          })
+          .catch(() => {
+            // Dufflepud unreachable — skip the sensitivity check for this image
+          })
       }
     }
   })
