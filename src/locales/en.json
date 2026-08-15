@@ -607,7 +607,15 @@
     "filterSerie": "Series",
     "filterShort": "Short",
     "scopeAll": "Everyone",
-    "scopeFollows": "Follows"
+    "scopeFollows": "Follows",
+    "sort": "Sort",
+    "sortRecent": "Newest",
+    "sortOldest": "Oldest",
+    "sortAlpha": "A-Z",
+    "season": "Season",
+    "episode": "episode",
+    "episodes": "episodes",
+    "genreOther": "Other"
   },
   "vocaux": {
     "title": "Vocaux — Voice Messages",

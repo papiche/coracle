@@ -607,7 +607,15 @@
     "filterSerie": "Serie",
     "filterShort": "Corto",
     "scopeAll": "Todos",
-    "scopeFollows": "Seguidos"
+    "scopeFollows": "Seguidos",
+    "sort": "Ordenar",
+    "sortRecent": "Reciente",
+    "sortOldest": "Antiguo",
+    "sortAlpha": "A-Z",
+    "season": "Temporada",
+    "episode": "episodio",
+    "episodes": "episodios",
+    "genreOther": "Otro"
   },
   "vocaux": {
     "title": "Vocaux — Mensajes de voz",

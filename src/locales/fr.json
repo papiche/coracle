@@ -607,7 +607,15 @@
     "filterSerie": "Série",
     "filterShort": "Court",
     "scopeAll": "Tout le monde",
-    "scopeFollows": "Abonnements"
+    "scopeFollows": "Abonnements",
+    "sort": "Trier",
+    "sortRecent": "Recent",
+    "sortOldest": "Ancien",
+    "sortAlpha": "A-Z",
+    "season": "Saison",
+    "episode": "episode",
+    "episodes": "episodes",
+    "genreOther": "Autre"
   },
   "vocaux": {
     "title": "Vocaux — Messages vocaux",

@@ -14,7 +14,7 @@
   $: gifanimUrl = info.gifanimUrl
   $: duration = info.duration
   $: isShort = info.isShort
-  $: topics = info.topics
+  $: topics = info.genres
 
   const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
 

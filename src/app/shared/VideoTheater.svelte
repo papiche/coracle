@@ -10,7 +10,8 @@
   import {getSetting, env, myLoad} from "src/engine"
   import {router} from "src/app/util"
 
-  export let id = ""
+  // Route path param, unused — events/index (via cx) carry the actual state.
+  export const id = ""
   export let events: TrustedEvent[] = []
   export let index = 0
 

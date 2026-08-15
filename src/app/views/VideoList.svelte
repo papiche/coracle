@@ -14,6 +14,7 @@
   import FlexColumn from "src/partials/FlexColumn.svelte"
   import VideoCard from "src/app/shared/VideoCard.svelte"
   import {getVerifiedUPlanet} from "src/util/uplanet-detect"
+  import {extractVideoInfo} from "src/util/video"
   import {userFollows, sortEventsDesc} from "src/engine"
 
   const uplanet = getVerifiedUPlanet()
@@ -35,7 +36,14 @@
   let searchQuery = ""
   type SourceFilter = "all" | "local" | "youtube" | "film" | "serie" | "short"
   let sourceFilter: SourceFilter = "all"
-  let sortOrder: "desc" | "asc" = "desc"
+  type SortOrder = "desc" | "asc" | "alpha"
+  let sortOrder: SortOrder = "desc"
+  const sortCycle: Record<SortOrder, SortOrder> = {desc: "asc", asc: "alpha", alpha: "desc"}
+  const sortIcon: Record<SortOrder, string> = {
+    desc: "fa-clock",
+    asc: "fa-clock",
+    alpha: "fa-sort-alpha-down",
+  }
 
   // Filter button definitions (typed constant so template `{#each}` infers the union correctly)
   const sourceFilters: Array<{id: SourceFilter; label: string; icon: string}> = [
@@ -49,21 +57,6 @@
 
   const filterLabel = (f: {id: SourceFilter; label: string}) =>
     f.label === "__youtube__" ? "YouTube" : $_(`${f.label}`) || f.label.split(".").pop() || f.label
-
-  /** Detect the source type of a video event (same logic as VideoCard) */
-  const getSourceType = (e: TrustedEvent): string => {
-    const src = e.tags.find(t => t[0] === "i" && t[1]?.startsWith("source:"))
-    if (src) return src[1].replace("source:", "")
-    if (e.tags.some(t => t[0] === "t" && t[1] === "youtube")) return "youtube"
-    if (e.tags.some(t => t[0] === "t" && t[1] === "film")) return "film"
-    if (e.tags.some(t => t[0] === "t" && t[1] === "serie")) return "serie"
-    if (e.tags.some(t => t[0] === "t" && ["webcam", "local", "nostr"].includes(t[1])))
-      return "local"
-    return "local" // default: locally-published
-  }
-
-  const getDuration = (e: TrustedEvent): number =>
-    parseInt(e.tags.find(t => t[0] === "duration")?.[1] || "0")
 
   $: authors = !$pubkey || activeScope === "all" ? undefined : [...$userFollows]
 
@@ -145,20 +138,86 @@
     // Source filter
     if (sourceFilter !== "all") {
       events = events.filter(e => {
+        const info = extractVideoInfo(e)
         if (sourceFilter === "short") {
-          const dur = getDuration(e)
-          return e.kind === 22 || (dur > 0 && dur <= 60)
+          return e.kind === 22 || (info.duration > 0 && info.duration <= 60)
         }
-        return getSourceType(e) === sourceFilter
+        return info.sourceType === sourceFilter
       })
     }
 
     // Sort order (grid events arrive desc by default from the relay)
     if (sortOrder === "asc") {
       events = [...events].sort((a, b) => a.created_at - b.created_at)
+    } else if (sortOrder === "alpha") {
+      events = [...events].sort((a, b) =>
+        extractVideoInfo(a).title.localeCompare(extractVideoInfo(b).title),
+      )
     }
 
     return events
+  })()
+
+  // Series grouped by name, episodes sorted by season then episode number —
+  // makes a show binge-watchable instead of scattered across the flat grid.
+  $: seriesGroups = (() => {
+    if (sourceFilter !== "serie") return []
+
+    const bySeries = new Map<
+      string,
+      {event: TrustedEvent; info: ReturnType<typeof extractVideoInfo>}[]
+    >()
+    for (const event of filteredEvents) {
+      const info = extractVideoInfo(event)
+      const key = info.seriesName || info.title
+      if (!bySeries.has(key)) bySeries.set(key, [])
+      bySeries.get(key).push({event, info})
+    }
+
+    return Array.from(bySeries.entries())
+      .map(([name, items]) => {
+        items.sort((a, b) => {
+          const seasonDiff = (a.info.seasonNumber ?? 0) - (b.info.seasonNumber ?? 0)
+          if (seasonDiff !== 0) return seasonDiff
+          return (a.info.episodeNumber ?? 0) - (b.info.episodeNumber ?? 0)
+        })
+
+        const episodes = items.map(i => i.event)
+        const bySeason = new Map<number, TrustedEvent[]>()
+        for (const item of items) {
+          const season = item.info.seasonNumber ?? 0
+          if (!bySeason.has(season)) bySeason.set(season, [])
+          bySeason.get(season).push(item.event)
+        }
+        const seasons = Array.from(bySeason.entries())
+          .sort(([a], [b]) => a - b)
+          .map(([number, seasonEpisodes]) => ({number, episodes: seasonEpisodes}))
+
+        return {name, episodes, seasons}
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+  })()
+
+  // Films grouped by primary genre (first non-structural "t" tag), alphabetical within each group.
+  $: filmGroups = (() => {
+    if (sourceFilter !== "film") return []
+
+    const byGenre = new Map<string, TrustedEvent[]>()
+    for (const event of filteredEvents) {
+      const info = extractVideoInfo(event)
+      const key = info.genres[0] || $_("video.genreOther") || "Autre"
+      if (!byGenre.has(key)) byGenre.set(key, [])
+      byGenre.get(key).push(event)
+    }
+
+    return Array.from(byGenre.entries())
+      .map(([name, films]) => ({
+        name,
+        films: films.sort((a, b) =>
+          extractVideoInfo(a).title.localeCompare(extractVideoInfo(b).title),
+        ),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
   })()
 
   // Reload when feed changes (tab switch) or when switching to grid mode
@@ -279,22 +338,85 @@
       <!-- Spacer -->
       <div class="flex-1" />
 
-      <!-- Sort order -->
+      <!-- Sort order: cycles Récent → Ancien → Alphabétique -->
       <button
-        class="flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-all"
-        class:border-accent={sortOrder === "desc"}
-        class:bg-neutral-800={true}
-        class:text-neutral-300={true}
-        title="Trier par date"
-        on:click={() => (sortOrder = sortOrder === "desc" ? "asc" : "desc")}>
-        <i class="fa fa-clock" />
-        {sortOrder === "desc" ? "Récent ↓" : "Ancien ↑"}
+        class="flex items-center gap-1 rounded-full border border-neutral-700 bg-neutral-800 px-3 py-1 text-xs font-medium text-neutral-300 transition-all"
+        title={$_("video.sort")}
+        on:click={() => (sortOrder = sortCycle[sortOrder])}>
+        <i class="fa {sortIcon[sortOrder]}" />
+        {sortOrder === "desc"
+          ? $_("video.sortRecent") + " ↓"
+          : sortOrder === "asc"
+            ? $_("video.sortOldest") + " ↑"
+            : $_("video.sortAlpha")}
       </button>
     </div>
   {/if}
   {#key `${activeScope}-${viewMode}`}
     {#if viewMode === "list"}
       <Feed {feed} />
+    {:else if sourceFilter === "serie"}
+      <!-- Grouped by series name, episodes ordered by season/episode -->
+      {#each seriesGroups as group (group.name)}
+        <div class="mb-5">
+          <div class="mb-2 flex items-center gap-2">
+            <i class="fa fa-tv text-purple-400" />
+            <h3 class="break-words text-base font-bold text-neutral-100">{group.name}</h3>
+            <span class="shrink-0 text-xs text-neutral-500">
+              {group.episodes.length}
+              {group.episodes.length > 1 ? $_("video.episodes") : $_("video.episode")}
+            </span>
+          </div>
+          {#each group.seasons as season (season.number)}
+            {#if group.seasons.length > 1}
+              <div class="mb-1 mt-2 text-xs font-semibold uppercase text-neutral-500">
+                {$_("video.season")}
+                {season.number}
+              </div>
+            {/if}
+            <div
+              class="grid gap-3"
+              style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr))">
+              {#each season.episodes as event (event.id)}
+                <div in:fly={{y: 20}} class="min-w-0">
+                  <VideoCard
+                    {event}
+                    events={group.episodes}
+                    index={group.episodes.indexOf(event)} />
+                </div>
+              {/each}
+            </div>
+          {/each}
+        </div>
+      {/each}
+      {#if gridExhausted && seriesGroups.length === 0}
+        <p class="py-12 text-center text-neutral-400">{$_("feed.empty")}</p>
+      {/if}
+    {:else if sourceFilter === "film"}
+      <!-- Grouped by primary genre, alphabetical within each group -->
+      {#each filmGroups as group (group.name)}
+        <div class="mb-5">
+          <div class="mb-2 flex items-center gap-2">
+            <i class="fa fa-film text-blue-400" />
+            <h3 class="break-words text-base font-bold capitalize text-neutral-100">
+              {group.name}
+            </h3>
+            <span class="shrink-0 text-xs text-neutral-500">{group.films.length}</span>
+          </div>
+          <div
+            class="grid gap-3"
+            style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr))">
+            {#each group.films as event (event.id)}
+              <div in:fly={{y: 20}} class="min-w-0">
+                <VideoCard {event} events={group.films} index={group.films.indexOf(event)} />
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/each}
+      {#if gridExhausted && filmGroups.length === 0}
+        <p class="py-12 text-center text-neutral-400">{$_("feed.empty")}</p>
+      {/if}
     {:else}
       <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr))">
         {#each filteredEvents as event, i (event.id)}
@@ -303,12 +425,15 @@
           </div>
         {/each}
       </div>
+      {#if gridExhausted && filteredEvents.length === 0}
+        <p class="py-12 text-center text-neutral-400">{$_("feed.empty")}</p>
+      {/if}
+    {/if}
+    {#if viewMode === "grid"}
       {#if gridLoading && gridEvents.length === 0}
         <Spinner />
       {:else if !gridExhausted && gridEvents.length > 0}
         <Spinner />
-      {:else if gridExhausted && filteredEvents.length === 0}
-        <p class="py-12 text-center text-neutral-400">{$_("feed.empty")}</p>
       {/if}
     {/if}
   {/key}

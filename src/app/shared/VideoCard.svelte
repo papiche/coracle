@@ -18,6 +18,10 @@
   const duration = info.duration
   const isShort = info.isShort
   const sourceType = info.sourceType
+  const seriesName = info.seriesName
+  const seasonNumber = info.seasonNumber
+  const episodeNumber = info.episodeNumber
+  const hasEpisodeInfo = seasonNumber !== null && episodeNumber !== null
   const description = getDescriptionTag(event) || event.content?.slice(0, 200) || ""
 
   function getDescriptionTag(e: TrustedEvent) {
@@ -28,12 +32,8 @@
     return ""
   }
 
-  // Collect hashtags from "t" tags (max 3 displayed)
-  const hashtags = event.tags
-    .filter(t => t[0] === "t" && t[1])
-    .map(t => t[1])
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .slice(0, 3)
+  // Genres (TMDB), max 3 displayed — structural tags (film/movie/short/…) excluded
+  const hashtags = [...new Set(info.genres)].slice(0, 3)
 
   const formatDuration = (s: number) => {
     const h = Math.floor(s / 3600)
@@ -109,10 +109,18 @@
     {/if}
 
     <!-- Short badge -->
-    {#if isShort}
+    {#if isShort && !hasEpisodeInfo}
       <span
         class="absolute left-1.5 top-1.5 rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-white">
         Short
+      </span>
+    {/if}
+
+    <!-- Season/Episode badge (series only) -->
+    {#if hasEpisodeInfo}
+      <span
+        class="bg-purple-600 absolute left-1.5 top-1.5 rounded px-1.5 py-0.5 text-xs font-semibold text-white">
+        S{seasonNumber} · E{episodeNumber}
       </span>
     {/if}
 
@@ -131,6 +139,14 @@
 
   <!-- Info below thumbnail (YouTube-style) -->
   <div class="flex flex-col gap-0.5 py-2 text-left">
+    <!-- Series name (episodes only) -->
+    {#if seriesName}
+      <span class="text-purple-400 truncate text-xs font-semibold uppercase tracking-wide">
+        <i class="fa fa-tv" />
+        {seriesName}
+      </span>
+    {/if}
+
     <!-- Title (2 lines max) -->
     <span
       class="line-clamp-2 break-words text-sm font-medium leading-snug text-neutral-100 group-hover:text-white">

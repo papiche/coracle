@@ -10,8 +10,38 @@ export interface VideoInfo {
   duration: number
   isShort: boolean
   topics: string[]
+  // Subset of topics with structural/boilerplate tags (film, movie, series,
+  // tv-show, youtube, video, webcam, live, short, regular, Channel-*) removed —
+  // what's left is the actual TMDB genres (action, science-fiction, …).
+  genres: string[]
   sourceType: string
+  // Series metadata (published by ajouter_media.sh / publish_nostr_video.sh for source:serie)
+  seriesName: string
+  episodeName: string
+  seasonNumber: number | null
+  episodeNumber: number | null
 }
+
+// "t" tag values that publish_nostr_video.sh adds for structure/routing, not
+// as user-facing genres — must be excluded when displaying genre chips.
+const STRUCTURAL_TAGS = new Set([
+  "film",
+  "movie",
+  "series",
+  "serie",
+  "tv-show",
+  "youtube",
+  "video",
+  "webcam",
+  "live",
+  "short",
+  "regular",
+  "nostr",
+  "local",
+])
+
+const isStructuralTag = (tag: string) =>
+  STRUCTURAL_TAGS.has(tag.toLowerCase()) || /^channel-/i.test(tag)
 
 const findTag = (tags: string[][], keys: string[]) => {
   for (const key of keys) {
@@ -48,6 +78,12 @@ export const extractVideoInfo = (event: TrustedEvent): VideoInfo => {
 
   const duration = parseInt(findTag(tags, ["duration"]) || "0")
 
+  const seasonRaw = findTag(tags, ["season_number"])
+  const episodeRaw = findTag(tags, ["episode_number"])
+
+  const topics = getTagValues("t", tags)
+  const genres = topics.filter(t => t && !isStructuralTag(t))
+
   return {
     title: findTag(tags, ["title"]) || "Video",
     videoUrl: resolveIpfsUrl(findTag(tags, ["url", "r"]) || imetaUrl),
@@ -55,7 +91,12 @@ export const extractVideoInfo = (event: TrustedEvent): VideoInfo => {
     gifanimUrl: resolveIpfsUrl(findTag(tags, ["gifanim", "gif", "gifanim_ipfs"])),
     duration,
     isShort: event.kind === 22 || duration <= 60,
-    topics: getTagValues("t", tags),
+    topics,
+    genres,
     sourceType,
+    seriesName: findTag(tags, ["series_name"]),
+    episodeName: findTag(tags, ["episode_name"]),
+    seasonNumber: seasonRaw ? parseInt(seasonRaw) : null,
+    episodeNumber: episodeRaw ? parseInt(episodeRaw) : null,
   }
 }
