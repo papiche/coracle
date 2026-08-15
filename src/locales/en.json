@@ -185,7 +185,8 @@
     "openWith": "Open with:",
     "powCost": "This event cost {pow} bits of work",
     "encrypted": "Encrypted",
-    "relayCount": "{n, plural, one {# relay} other {# relays}}"
+    "relayCount": "{n, plural, one {# relay} other {# relays}}",
+    "likeFree": "Free like"
   },
   "feed": {
     "replies": "Replies",
@@ -604,7 +605,9 @@
     "filterLocal": "Local",
     "filterFilm": "Film",
     "filterSerie": "Series",
-    "filterShort": "Short"
+    "filterShort": "Short",
+    "scopeAll": "Everyone",
+    "scopeFollows": "Follows"
   },
   "vocaux": {
     "title": "Vocaux — Voice Messages",

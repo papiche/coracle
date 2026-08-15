@@ -1,57 +1,31 @@
 <script lang="ts">
-  import {getTagValue, getTagValues} from "@welshman/util"
   import {imgproxy} from "src/engine"
   import {router} from "src/app/util/router"
-  import {resolveIpfsUrl} from "src/util/ipfs"
+  import {extractVideoInfo} from "src/util/video"
 
   export let note
   export let showMedia = false
 
-  // NIP-71 tag extraction (inspired by nostr.html extractNostrTubeVideo)
-  const findTag = (keys: string[]) => {
-    for (const key of keys) {
-      const val = getTagValue(key, note.tags)
-      if (val) return val
-    }
-    return ""
-  }
-
-  const title = findTag(["title"]) || "Video"
-  // Resolve IPFS CIDs/paths to full gateway URLs for all media references.
-  // Raw CIDs (Qm…, bafy…) and /ipfs/ paths from NIP-71 relays would otherwise
-  // be interpreted as relative URLs by the browser, causing 404s when the app
-  // is itself hosted on IPFS (e.g. https://ipfs.copylaradio.com/ipfs/<app-CID>/).
-  const videoUrl = resolveIpfsUrl(findTag(["url", "r"]))
-  const thumbUrl = resolveIpfsUrl(findTag(["image", "thumb", "thumbnail_ipfs"]))
-  // gifanim must NOT go through imgproxy — imgproxy returns a static frame,
-  // destroying the animation. It is resolved directly to the gateway URL.
-  const gifanimUrl = resolveIpfsUrl(findTag(["gifanim", "gif", "gifanim_ipfs"]))
-  const duration = parseInt(findTag(["duration"]) || "0")
-  const isShort = note.kind === 22 || duration <= 60
-  const topics = getTagValues("t", note.tags)
-
-  // Parse imeta fallback for video URL
-  const imetaTag = note.tags.find(t => t[0] === "imeta")
-  let imetaUrl = ""
-  if (imetaTag) {
-    for (let i = 1; i < imetaTag.length; i++) {
-      if (typeof imetaTag[i] === "string" && imetaTag[i].startsWith("url ")) {
-        imetaUrl = resolveIpfsUrl(imetaTag[i].substring(4).trim())
-      }
-    }
-  }
-
-  const effectiveVideoUrl = videoUrl || imetaUrl
+  $: info = extractVideoInfo(note)
+  $: title = info.title
+  $: effectiveVideoUrl = info.videoUrl
   // thumbUrl for imgproxy (static optimised image); gifanimUrl shown raw for animation.
-  const staticPreviewUrl = thumbUrl
+  $: staticPreviewUrl = info.thumbUrl
+  $: gifanimUrl = info.gifanimUrl
+  $: duration = info.duration
+  $: isShort = info.isShort
+  $: topics = info.topics
 
-  const formatDuration = (s: number) =>
-    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
+  const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
 
   const openVideo = (e: MouseEvent) => {
     if (e.metaKey) return window.open(effectiveVideoUrl, "_blank")
     if (effectiveVideoUrl) {
-      router.at("media").of(effectiveVideoUrl).open({overlay: true})
+      router
+        .at("video-theater")
+        .of(note.id)
+        .cx({events: [note], index: 0})
+        .open({overlay: true})
     }
   }
 </script>

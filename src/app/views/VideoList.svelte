@@ -9,7 +9,6 @@
   import {createScroller} from "src/util/misc"
   import {fly} from "src/util/transition"
   import Feed from "src/app/shared/Feed.svelte"
-  import Tabs from "src/partials/Tabs.svelte"
   import Button from "src/partials/Button.svelte"
   import Spinner from "src/partials/Spinner.svelte"
   import FlexColumn from "src/partials/FlexColumn.svelte"
@@ -18,9 +17,9 @@
   import {userFollows, sortEventsDesc} from "src/engine"
 
   const uplanet = getVerifiedUPlanet()
-  const tabs = ["🌐", "→"]
 
-  let activeTab = "🌐"
+  type Scope = "all" | "follows"
+  let activeScope: Scope = "all"
   let viewMode: "grid" | "list" = "grid"
 
   // Grid mode state
@@ -40,16 +39,16 @@
 
   // Filter button definitions (typed constant so template `{#each}` infers the union correctly)
   const sourceFilters: Array<{id: SourceFilter; label: string; icon: string}> = [
-    {id: "all",     label: "video.filterAll",   icon: "fa-globe"},
-    {id: "local",   label: "video.filterLocal", icon: "fa-broadcast-tower"},
-    {id: "youtube", label: "__youtube__",       icon: "fa-youtube"},
-    {id: "film",    label: "video.filterFilm",  icon: "fa-film"},
-    {id: "serie",   label: "video.filterSerie", icon: "fa-tv"},
-    {id: "short",   label: "video.filterShort", icon: "fa-bolt"},
+    {id: "all", label: "video.filterAll", icon: "fa-globe"},
+    {id: "local", label: "video.filterLocal", icon: "fa-broadcast-tower"},
+    {id: "youtube", label: "__youtube__", icon: "fa-youtube"},
+    {id: "film", label: "video.filterFilm", icon: "fa-film"},
+    {id: "serie", label: "video.filterSerie", icon: "fa-tv"},
+    {id: "short", label: "video.filterShort", icon: "fa-bolt"},
   ]
 
   const filterLabel = (f: {id: SourceFilter; label: string}) =>
-    f.label === "__youtube__" ? "YouTube" : ($_(`${f.label}`) || f.label.split(".").pop() || f.label)
+    f.label === "__youtube__" ? "YouTube" : $_(`${f.label}`) || f.label.split(".").pop() || f.label
 
   /** Detect the source type of a video event (same logic as VideoCard) */
   const getSourceType = (e: TrustedEvent): string => {
@@ -58,27 +57,29 @@
     if (e.tags.some(t => t[0] === "t" && t[1] === "youtube")) return "youtube"
     if (e.tags.some(t => t[0] === "t" && t[1] === "film")) return "film"
     if (e.tags.some(t => t[0] === "t" && t[1] === "serie")) return "serie"
-    if (e.tags.some(t => t[0] === "t" && ["webcam", "local", "nostr"].includes(t[1]))) return "local"
+    if (e.tags.some(t => t[0] === "t" && ["webcam", "local", "nostr"].includes(t[1])))
+      return "local"
     return "local" // default: locally-published
   }
 
   const getDuration = (e: TrustedEvent): number =>
     parseInt(e.tags.find(t => t[0] === "duration")?.[1] || "0")
 
-  const setActiveTab = tab => {
-    activeTab = tab
-  }
-
-  $: authors =
-    !$pubkey || activeTab === "🌐"
-      ? undefined
-      : activeTab === "→"
-        ? [...$userFollows]
-        : undefined
+  $: authors = !$pubkey || activeScope === "all" ? undefined : [...$userFollows]
 
   $: feed = authors
-    ? {title: "Videos", identifier: "videos", description: "Video feed", definition: makeIntersectionFeed(makeKindFeed(21, 22), makeAuthorFeed(...authors))}
-    : {title: "Videos", identifier: "videos", description: "Video feed", definition: makeIntersectionFeed(makeKindFeed(21, 22))}
+    ? {
+        title: "Videos",
+        identifier: "videos",
+        description: "Video feed",
+        definition: makeIntersectionFeed(makeKindFeed(21, 22), makeAuthorFeed(...authors)),
+      }
+    : {
+        title: "Videos",
+        identifier: "videos",
+        description: "Video feed",
+        definition: makeIntersectionFeed(makeKindFeed(21, 22)),
+      }
 
   const loadGridEvents = () => {
     gridAbort.abort()
@@ -207,13 +208,39 @@
         <Button
           class="btn btn-accent"
           on:click={() => window.open(`${uplanet.apiUrl}/webcam?html=1`, "_blank")}>
-          <i class="fa fa-plus" /> {$_("video.publish")}
+          <i class="fa fa-plus" />
+          {$_("video.publish")}
         </Button>
       {/if}
     </div>
   </div>
   {#if $pubkey}
-    <Tabs {tabs} {activeTab} {setActiveTab} />
+    <div class="flex items-center gap-2">
+      <button
+        class="flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all"
+        class:border-accent={activeScope === "all"}
+        class:bg-accent={activeScope === "all"}
+        class:text-white={activeScope === "all"}
+        class:border-neutral-700={activeScope !== "all"}
+        class:bg-neutral-800={activeScope !== "all"}
+        class:text-neutral-400={activeScope !== "all"}
+        on:click={() => (activeScope = "all")}>
+        <i class="fa fa-globe" />
+        {$_("video.scopeAll")}
+      </button>
+      <button
+        class="flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all"
+        class:border-accent={activeScope === "follows"}
+        class:bg-accent={activeScope === "follows"}
+        class:text-white={activeScope === "follows"}
+        class:border-neutral-700={activeScope !== "follows"}
+        class:bg-neutral-800={activeScope !== "follows"}
+        class:text-neutral-400={activeScope !== "follows"}
+        on:click={() => (activeScope = "follows")}>
+        <i class="fa fa-user-friends" />
+        {$_("video.scopeFollows")}
+      </button>
+    </div>
   {/if}
   {#if viewMode === "grid"}
     <!-- Search bar -->
@@ -265,16 +292,14 @@
       </button>
     </div>
   {/if}
-  {#key `${activeTab}-${viewMode}`}
+  {#key `${activeScope}-${viewMode}`}
     {#if viewMode === "list"}
       <Feed {feed} />
     {:else}
-      <div
-        class="grid gap-3"
-        style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr))">
-        {#each filteredEvents as event (event.id)}
-          <div in:fly={{y: 20}}>
-            <VideoCard {event} />
+      <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr))">
+        {#each filteredEvents as event, i (event.id)}
+          <div in:fly={{y: 20}} class="min-w-0">
+            <VideoCard {event} events={filteredEvents} index={i} />
           </div>
         {/each}
       </div>

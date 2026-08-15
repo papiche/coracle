@@ -185,7 +185,8 @@
     "openWith": "Ouvrir avec :",
     "powCost": "Cet evenement a coute {pow} bits de travail",
     "encrypted": "Chiffre",
-    "relayCount": "{n, plural, one {# relais} other {# relais}}"
+    "relayCount": "{n, plural, one {# relais} other {# relais}}",
+    "likeFree": "Like gratuit"
   },
   "feed": {
     "replies": "Reponses",
@@ -604,7 +605,9 @@
     "filterLocal": "Local",
     "filterFilm": "Film",
     "filterSerie": "Série",
-    "filterShort": "Court"
+    "filterShort": "Court",
+    "scopeAll": "Tout le monde",
+    "scopeFollows": "Abonnements"
   },
   "vocaux": {
     "title": "Vocaux — Messages vocaux",

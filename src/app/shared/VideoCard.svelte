@@ -1,44 +1,32 @@
 <script lang="ts">
-  import * as nip19 from "nostr-tools/nip19"
   import type {TrustedEvent} from "@welshman/util"
-  import {getTagValue} from "@welshman/util"
-  import {Router} from "@welshman/router"
   import {displayProfileByPubkey} from "@welshman/app"
   import {imgproxy} from "src/engine"
   import {router} from "src/app/util/router"
-  import {resolveIpfsUrl} from "src/util/ipfs"
+  import {extractVideoInfo} from "src/util/video"
   import ExpirationBadge from "src/app/shared/ExpirationBadge.svelte"
 
   export let event: TrustedEvent
+  // Sibling videos + this card's position among them, so the theater can offer prev/next.
+  export let events: TrustedEvent[] = [event]
+  export let index = 0
 
-  const findTag = (keys: string[]) => {
-    for (const key of keys) {
-      const val = getTagValue(key, event.tags)
+  const info = extractVideoInfo(event)
+  const title = info.title
+  const thumbUrl = info.thumbUrl
+  const gifanimUrl = info.gifanimUrl
+  const duration = info.duration
+  const isShort = info.isShort
+  const sourceType = info.sourceType
+  const description = getDescriptionTag(event) || event.content?.slice(0, 200) || ""
+
+  function getDescriptionTag(e: TrustedEvent) {
+    for (const key of ["description", "summary", "alt"]) {
+      const val = e.tags.find(t => t[0] === key)?.[1]
       if (val) return val
     }
     return ""
   }
-
-  const title = findTag(["title"]) || "Video"
-  const rawThumbUrl = findTag(["image", "thumb", "thumbnail_ipfs"])
-  const rawGifanimUrl = findTag(["gifanim", "gif", "gifanim_ipfs"])
-  // Résoudre les CIDs bruts. Le thumbnail passe ensuite par imgproxy (qui bypass déjà
-  // les .gif) ; le gifanim doit rester un vrai GIF animé donc on ne l'envoie jamais
-  // à imgproxy.
-  const thumbUrl = resolveIpfsUrl(rawThumbUrl)
-  const gifanimUrl = resolveIpfsUrl(rawGifanimUrl)
-  const duration = parseInt(findTag(["duration"]) || "0")
-  const description =
-    findTag(["description", "summary", "alt"]) || event.content?.slice(0, 200) || ""
-  const isShort = event.kind === 22 || duration <= 60
-  const sourceType = (() => {
-    const src = event.tags.find(t => t[0] === "i" && t[1]?.startsWith("source:"))
-    if (src) return src[1].replace("source:", "")
-    if (event.tags.some(t => t[0] === "t" && t[1] === "youtube")) return "youtube"
-    if (event.tags.some(t => t[0] === "t" && t[1] === "film")) return "film"
-    if (event.tags.some(t => t[0] === "t" && t[1] === "serie")) return "serie"
-    return ""
-  })()
 
   // Collect hashtags from "t" tags (max 3 displayed)
   const hashtags = event.tags
@@ -69,47 +57,10 @@
 
   const authorDisplay = displayProfileByPubkey(event.pubkey)
 
-  // Validate that a string is a proper 64-char strictly-lowercase hex (sha256).
-  // NIP-19 (nip19.js) requires lowercase-only hex — no `i` flag here.
-  const isValidHex64 = (s: string) => /^[0-9a-f]{64}$/.test(s)
-
-  // Open note detail (with video player + like/reply/zap/share actions).
-  // Handles two id formats:
-  //   • raw hex (64 lowercase chars) → encode to nevent via nip19
-  //   • already a nevent1… bech32 string → use directly
+  // Open the fullscreen theater (video player + like/reply actions), with
+  // prev/next navigation across the sibling video list this card belongs to.
   const openNote = () => {
-    try {
-      const rawId = event.id ?? ""
-      // Case 1: id is already a bech32 nevent/note string → navigate directly
-      if (rawId.startsWith("nevent1") || rawId.startsWith("note1")) {
-        router.at("notes").of(rawId).open()
-        return
-      }
-
-      // Normalise to lowercase so nip19 doesn't choke on uppercase hex relays
-      const id = rawId.toLowerCase()
-      const pubkey = (event.pubkey ?? "").toLowerCase()
-
-      if (!isValidHex64(id) || !isValidHex64(pubkey)) {
-        console.warn(
-          "VideoCard: invalid event id or pubkey, skipping navigation",
-          rawId,
-          event.pubkey,
-        )
-        return
-      }
-
-      // Case 2: valid raw hex → encode to nevent
-      const nevent = nip19.neventEncode({
-        id,
-        kind: event.kind,
-        author: pubkey,
-        relays: Router.get().Event(event).limit(3).getUrls(),
-      })
-      router.at("notes").of(nevent).open()
-    } catch (err) {
-      console.warn("VideoCard: navigation failed", event.id, err)
-    }
+    router.at("video-theater").of(event.id).cx({events, index}).open({overlay: true})
   }
 
   const openProfile = (e: MouseEvent) => {
@@ -182,7 +133,7 @@
   <div class="flex flex-col gap-0.5 py-2 text-left">
     <!-- Title (2 lines max) -->
     <span
-      class="line-clamp-2 text-sm font-medium leading-snug text-neutral-100 group-hover:text-white">
+      class="line-clamp-2 break-words text-sm font-medium leading-snug text-neutral-100 group-hover:text-white">
       {title}
     </span>
 
@@ -209,7 +160,7 @@
 
     <!-- Description (2 lines, like youtube.html) -->
     {#if description}
-      <p class="mt-0.5 line-clamp-2 text-xs leading-relaxed text-neutral-500">
+      <p class="mt-0.5 line-clamp-2 break-words text-xs leading-relaxed text-neutral-500">
         {description}
       </p>
     {/if}

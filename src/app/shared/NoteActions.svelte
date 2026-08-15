@@ -189,9 +189,7 @@
   $: authorHasMultipass = !!(($authorProfile as any)?.g1v2 || ($authorProfile as any)?.g1pub)
 
   // Filter presets to only show amounts within balance (only for MULTIPASS recipients)
-  $: zenPresets = authorHasMultipass
-    ? ZEN_LIKE_PRESETS.filter(n => n <= $myZenBalance)
-    : []
+  $: zenPresets = authorHasMultipass ? ZEN_LIKE_PRESETS.filter(n => n <= $myZenBalance) : []
 
   const reactZen = (amount: number) => {
     react(`+${amount}`)
@@ -325,24 +323,21 @@
           <button
             class="relative flex items-center gap-1 pt-1 transition-all hover:pb-1 hover:pt-0"
             on:click={() => deleteReaction(liked)}>
-            <Icon icon="heart" color="accent" class="cursor-pointer fa-beat fa-beat-custom" />
+            <Icon icon="heart" color="accent" class="fa-beat fa-beat-custom cursor-pointer" />
             {#if $likesCount > 0}
               <span transition:fly|local={{y: 5, duration: 100}} class="-mt-px">{$likesCount}</span>
             {/if}
           </button>
         {:else if authorHasMultipass && zenPresets.length > 0}
-          <!-- Author has MULTIPASS: show ZEN amount picker on hover -->
-          <Popover
-            theme="transparent"
-            opts={{hideOnClick: true}}
-            triggerType="mouseenter">
+          <!-- Author has MULTIPASS: plain click likes for free, hover offers a ZEN tip -->
+          <Popover theme="transparent" opts={{hideOnClick: true}} triggerType="mouseenter">
             <button
               slot="trigger"
               class={cx(
                 "relative flex items-center gap-1 pt-1 transition-all hover:pb-1 hover:pt-0",
                 {"pointer-events-none opacity-50": disableActions || event.pubkey === $pubkey},
               )}
-              on:click={() => reactZen(1)}>
+              on:click={() => react("+")}>
               <Icon icon="heart" color="neutral-100" class="cursor-pointer" />
               {#if $likesCount > 0}
                 <span transition:fly|local={{y: 5, duration: 100}} class="-mt-px"
@@ -350,9 +345,14 @@
               {/if}
             </button>
             <div slot="tooltip" class="flex items-center gap-1 rounded-lg bg-neutral-900 p-1">
+              <button
+                class="rounded px-2 py-1 font-mono text-xs text-neutral-300 transition-colors hover:bg-accent hover:text-white"
+                on:click|stopPropagation={() => react("+")}>
+                {$_("actions.likeFree")}
+              </button>
               {#each zenPresets as amount}
                 <button
-                  class="rounded px-2 py-1 text-xs font-mono transition-colors hover:bg-accent hover:text-white
+                  class="rounded px-2 py-1 font-mono text-xs transition-colors hover:bg-accent hover:text-white
                     {amount === 1 ? 'text-accent' : 'text-neutral-300'}"
                   on:click|stopPropagation={() => reactZen(amount)}>
                   +{amount}Ẑ
@@ -370,8 +370,7 @@
             on:click={() => react("+")}>
             <Icon icon="heart" color="neutral-100" class="cursor-pointer" />
             {#if $likesCount > 0}
-              <span transition:fly|local={{y: 5, duration: 100}} class="-mt-px"
-                >{$likesCount}</span>
+              <span transition:fly|local={{y: 5, duration: 100}} class="-mt-px">{$likesCount}</span>
             {/if}
           </button>
         {/if}

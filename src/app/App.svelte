@@ -57,6 +57,7 @@
   import LoginConnect from "src/app/views/LoginConnect.svelte"
   import Logout from "src/app/views/Logout.svelte"
   import MediaDetail from "src/app/views/MediaDetail.svelte"
+  import VideoTheater from "src/app/shared/VideoTheater.svelte"
   import NoteCreate from "src/app/views/NoteCreate.svelte"
   import NoteDelete from "src/app/views/NoteDelete.svelte"
   import NoteDetail from "src/app/views/NoteDetail.svelte"
@@ -188,6 +189,12 @@
   router.register("/media/:url", MediaDetail, {
     serializers: {
       url: asUrlComponent("url"),
+    },
+  })
+
+  router.register("/video-theater/:id", VideoTheater, {
+    serializers: {
+      id: asString("id"),
     },
   })
 

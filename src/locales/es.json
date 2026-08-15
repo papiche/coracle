@@ -185,7 +185,8 @@
     "openWith": "Abrir con:",
     "powCost": "Este evento costó {pow} bits de trabajo",
     "encrypted": "Cifrado",
-    "relayCount": "{n, plural, one {# relé} other {# relés}}"
+    "relayCount": "{n, plural, one {# relé} other {# relés}}",
+    "likeFree": "Me gusta gratis"
   },
   "feed": {
     "replies": "Respuestas",
@@ -604,7 +605,9 @@
     "filterLocal": "Local",
     "filterFilm": "Película",
     "filterSerie": "Serie",
-    "filterShort": "Corto"
+    "filterShort": "Corto",
+    "scopeAll": "Todos",
+    "scopeFollows": "Seguidos"
   },
   "vocaux": {
     "title": "Vocaux — Mensajes de voz",

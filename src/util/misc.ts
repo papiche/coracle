@@ -270,3 +270,23 @@ export const localizedLegalDoc = (name: "terms" | "privacy", locale: string | nu
 
   return lang === "fr" || lang === "es" ? `/${name}.${lang}.html` : `/${name}.html`
 }
+
+const LOCAL_HOSTNAME_RE =
+  /^(localhost|127\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|\[?::1\]?)$/
+
+/**
+ * Force http:// URLs to https:// unless the host is localhost/LAN (which have
+ * no certificate to serve). Remote profile data (avatars, banners...) sometimes
+ * carries a stale http:// URL from before a station's certificate was set up.
+ */
+export const upgradeToHttps = (url: string): string => {
+  if (!url?.startsWith("http://")) return url
+
+  try {
+    if (LOCAL_HOSTNAME_RE.test(new URL(url).hostname)) return url
+  } catch {
+    return url
+  }
+
+  return "https://" + url.slice("http://".length)
+}

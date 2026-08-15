@@ -254,7 +254,7 @@
         {@const summary = getTagValue("summary", event.tags) || event.content?.slice(0, 150) || ""}
         {@const image = getTagValue("image", event.tags)}
         {@const tags = getTagValues("t", event.tags)}
-        <div in:fly={{y: 20}}>
+        <div in:fly={{y: 20}} class="min-w-0">
           <button
             class="group flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-xl border border-transparent bg-neutral-900 text-left transition-all hover:-translate-y-0.5 hover:border-accent"
             on:click={() => router.at("notes").of(event.id).open()}>
@@ -276,12 +276,12 @@
             <!-- Article info -->
             <div class="flex flex-1 flex-col gap-1.5 p-3">
               <h3
-                class="line-clamp-2 text-sm font-semibold leading-snug text-neutral-100 group-hover:text-white">
+                class="line-clamp-2 break-words text-sm font-semibold leading-snug text-neutral-100 group-hover:text-white">
                 {title}
               </h3>
 
               {#if summary}
-                <p class="line-clamp-2 text-xs leading-relaxed text-neutral-500">
+                <p class="line-clamp-2 break-words text-xs leading-relaxed text-neutral-500">
                   {summary}
                 </p>
               {/if}

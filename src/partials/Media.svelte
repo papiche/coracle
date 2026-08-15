@@ -10,12 +10,16 @@
   export let fullSize = false
   export let onLinkClick: (url: string, event: any) => void
   export let onImageClick: (url: string, event: any) => void
+  // Explicit hint from a caller that already knows the media kind (e.g. a NIP-71
+  // video note) — bypasses extension-sniffing, which fails for extensionless
+  // IPFS URLs (.../ipfs/<CID>) and would otherwise fall through to MediaLinkPreview.
+  export let type: "audio" | "video" | "image" | null = null
 
-  const isAudio = url.match(/\.(wav|mp3|m3u8)$/)
-  const isSpotify = url.match(/open.spotify.com/)
-  const isTidal = url.match(/tidal.com/)
-  const isVideo = url.match(/\.(mov|webm|mp4)$/)
-  const isImage = url.match(/\.(jpe?g|png|gif|webp)$/)
+  const isAudio = type === "audio" || url.match(/\.(wav|mp3|m3u8)$/)
+  const isSpotify = type === null && url.match(/open.spotify.com/)
+  const isTidal = type === null && url.match(/tidal.com/)
+  const isVideo = type === "video" || url.match(/\.(mov|webm|mp4)$/)
+  const isImage = type === "image" || url.match(/\.(jpe?g|png|gif|webp)$/)
 
   const linkClickHandler = (event: any) => onLinkClick(url, event)
   const imageClickHandler = (event: any) => onImageClick(url, event)
