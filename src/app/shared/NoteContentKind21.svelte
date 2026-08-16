@@ -1,13 +1,13 @@
 <script lang="ts">
   import {imgproxy} from "src/engine"
   import {router} from "src/app/util/router"
-  import {extractVideoInfo} from "src/util/video"
+  import {extractVideoInfo, cleanVideoTitle} from "src/util/video"
 
   export let note
   export let showMedia = false
 
   $: info = extractVideoInfo(note)
-  $: title = info.title
+  $: title = cleanVideoTitle(info)
   $: effectiveVideoUrl = info.videoUrl
   // thumbUrl for imgproxy (static optimised image); gifanimUrl shown raw for animation.
   $: staticPreviewUrl = info.thumbUrl
@@ -31,9 +31,9 @@
 </script>
 
 <div class="flex flex-col gap-2 overflow-hidden">
-  <div class="flex items-start gap-2">
+  <div class="flex min-w-0 items-start gap-2">
     {#if title}
-      <h3 class="flex-1 text-lg font-bold">{title}</h3>
+      <h3 class="min-w-0 flex-1 break-words text-lg font-bold">{title}</h3>
     {/if}
     {#if duration > 0}
       <span class="whitespace-nowrap rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">

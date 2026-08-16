@@ -6,7 +6,7 @@
   import NoteHeader from "src/app/shared/NoteHeader.svelte"
   import NoteActions from "src/app/shared/NoteActions.svelte"
   import NoteReply from "src/app/shared/NoteReply.svelte"
-  import {extractVideoInfo} from "src/util/video"
+  import {extractVideoInfo, cleanVideoTitle} from "src/util/video"
   import {getSetting, env, myLoad} from "src/engine"
   import {router} from "src/app/util"
 
@@ -20,6 +20,7 @@
 
   $: event = events[currentIndex]
   $: info = event ? extractVideoInfo(event) : null
+  $: title = info ? cleanVideoTitle(info) : ""
   $: hasPrev = currentIndex > 0
   $: hasNext = currentIndex < events.length - 1
 
@@ -125,8 +126,19 @@
 
     <div class="max-h-[40vh] overflow-y-auto bg-neutral-900 p-4">
       <NoteHeader {event} showParent={false} />
-      {#if info.title}
-        <h3 class="mt-2 break-words text-lg font-bold text-white">{info.title}</h3>
+      {#if info.seriesName}
+        <div
+          class="text-purple-400 mt-2 flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+          <i class="fa fa-tv shrink-0" />
+          <span class="min-w-0 truncate">{info.seriesName}</span>
+          {#if info.seasonNumber !== null && info.episodeNumber !== null}
+            <span class="shrink-0 text-neutral-500"
+              >S{info.seasonNumber} · E{info.episodeNumber}</span>
+          {/if}
+        </div>
+      {/if}
+      {#if title}
+        <h3 class="mt-1 min-w-0 break-words text-lg font-bold text-white">{title}</h3>
       {/if}
       {#if event.content}
         <p class="mt-1 break-words text-sm text-neutral-300">{event.content}</p>

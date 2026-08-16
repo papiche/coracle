@@ -100,3 +100,43 @@ export const extractVideoInfo = (event: TrustedEvent): VideoInfo => {
     episodeNumber: episodeRaw ? parseInt(episodeRaw) : null,
   }
 }
+
+// Scene-release tokens (resolution, codec, source, audio, release group, …)
+// that ajouter_media.sh's raw filename fallback drags into the "title" tag
+// whenever no proper episode name was entered/scraped at ingest time.
+const SCENE_JUNK_RE =
+  /^(19|20)\d{2}$|^S\d{1,2}E\d{1,3}$|^\d{3,4}p$|^\d+bit$|^\d+ch$|^(multi|vff?|vo|vost(fr)?|truefrench|french|english|webrip|web-?dl|bluray|brrip|bdrip|dvdrip|hdtv|hdlight|remux|repack|proper|x264|x265|h264|h265|hevc|avc|aac|dts|ac3|eac3|flac|mp3)$/i
+
+/**
+ * Best-effort human-readable title: prefers an explicit episode name, else
+ * cleans up a dot-separated scene-release filename ("Dark.Matter.2024.S01E01
+ * .MULTI.1080p.WEBRip.x265-GROUP") down to "Dark Matter (2024)". Falls back
+ * to the raw title unchanged when it doesn't look like a scene filename.
+ */
+export const cleanVideoTitle = (info: VideoInfo): string => {
+  const raw = info.title
+
+  if (info.episodeName && info.episodeName !== raw) return info.episodeName
+
+  const withoutEpisodeSuffix = raw.replace(/\s*-\s*S\d{1,2}E\d{1,3}\s*$/i, "")
+
+  const dotCount = (withoutEpisodeSuffix.match(/\./g) || []).length
+  if (dotCount < 3) return withoutEpisodeSuffix
+
+  const tokens = withoutEpisodeSuffix.split(".")
+  const kept: string[] = []
+  let year = ""
+  for (const token of tokens) {
+    const core = token.split("-")[0]
+    if (SCENE_JUNK_RE.test(core)) {
+      if (/^(19|20)\d{2}$/.test(core)) year = core
+      break
+    }
+    kept.push(token)
+  }
+
+  if (kept.length === 0) return withoutEpisodeSuffix
+
+  const cleanedName = kept.join(" ")
+  return year ? `${cleanedName} (${year})` : cleanedName
+}

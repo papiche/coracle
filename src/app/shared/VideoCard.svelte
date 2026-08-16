@@ -3,7 +3,7 @@
   import {displayProfileByPubkey} from "@welshman/app"
   import {imgproxy} from "src/engine"
   import {router} from "src/app/util/router"
-  import {extractVideoInfo} from "src/util/video"
+  import {extractVideoInfo, cleanVideoTitle} from "src/util/video"
   import ExpirationBadge from "src/app/shared/ExpirationBadge.svelte"
 
   export let event: TrustedEvent
@@ -12,7 +12,7 @@
   export let index = 0
 
   const info = extractVideoInfo(event)
-  const title = info.title
+  const title = cleanVideoTitle(info)
   const thumbUrl = info.thumbUrl
   const gifanimUrl = info.gifanimUrl
   const duration = info.duration
@@ -70,7 +70,7 @@
 </script>
 
 <button
-  class="group flex cursor-pointer flex-col overflow-visible rounded-xl border border-transparent bg-transparent transition-all"
+  class="group flex w-full min-w-0 cursor-pointer flex-col overflow-visible rounded-xl border border-transparent bg-transparent transition-all"
   on:click={openNote}>
   <!-- Thumbnail 16:9 -->
   <div class="relative aspect-video w-full overflow-hidden rounded-xl bg-neutral-900">
@@ -138,7 +138,7 @@
   </div>
 
   <!-- Info below thumbnail (YouTube-style) -->
-  <div class="flex flex-col gap-0.5 py-2 text-left">
+  <div class="flex min-w-0 flex-col gap-0.5 py-2 text-left">
     <!-- Series name (episodes only) -->
     {#if seriesName}
       <span class="text-purple-400 truncate text-xs font-semibold uppercase tracking-wide">

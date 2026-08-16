@@ -14,7 +14,7 @@
   import FlexColumn from "src/partials/FlexColumn.svelte"
   import VideoCard from "src/app/shared/VideoCard.svelte"
   import {getVerifiedUPlanet} from "src/util/uplanet-detect"
-  import {extractVideoInfo} from "src/util/video"
+  import {extractVideoInfo, cleanVideoTitle} from "src/util/video"
   import {userFollows, sortEventsDesc} from "src/engine"
 
   const uplanet = getVerifiedUPlanet()
@@ -151,7 +151,7 @@
       events = [...events].sort((a, b) => a.created_at - b.created_at)
     } else if (sortOrder === "alpha") {
       events = [...events].sort((a, b) =>
-        extractVideoInfo(a).title.localeCompare(extractVideoInfo(b).title),
+        cleanVideoTitle(extractVideoInfo(a)).localeCompare(cleanVideoTitle(extractVideoInfo(b))),
       )
     }
 
@@ -169,7 +169,7 @@
     >()
     for (const event of filteredEvents) {
       const info = extractVideoInfo(event)
-      const key = info.seriesName || info.title
+      const key = info.seriesName || cleanVideoTitle(info)
       if (!bySeries.has(key)) bySeries.set(key, [])
       bySeries.get(key).push({event, info})
     }
@@ -214,7 +214,7 @@
       .map(([name, films]) => ({
         name,
         films: films.sort((a, b) =>
-          extractVideoInfo(a).title.localeCompare(extractVideoInfo(b).title),
+          cleanVideoTitle(extractVideoInfo(a)).localeCompare(cleanVideoTitle(extractVideoInfo(b))),
         ),
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -359,9 +359,9 @@
       <!-- Grouped by series name, episodes ordered by season/episode -->
       {#each seriesGroups as group (group.name)}
         <div class="mb-5">
-          <div class="mb-2 flex items-center gap-2">
-            <i class="fa fa-tv text-purple-400" />
-            <h3 class="break-words text-base font-bold text-neutral-100">{group.name}</h3>
+          <div class="mb-2 flex min-w-0 items-center gap-2">
+            <i class="fa fa-tv text-purple-400 shrink-0" />
+            <h3 class="min-w-0 break-words text-base font-bold text-neutral-100">{group.name}</h3>
             <span class="shrink-0 text-xs text-neutral-500">
               {group.episodes.length}
               {group.episodes.length > 1 ? $_("video.episodes") : $_("video.episode")}
@@ -396,9 +396,9 @@
       <!-- Grouped by primary genre, alphabetical within each group -->
       {#each filmGroups as group (group.name)}
         <div class="mb-5">
-          <div class="mb-2 flex items-center gap-2">
-            <i class="fa fa-film text-blue-400" />
-            <h3 class="break-words text-base font-bold capitalize text-neutral-100">
+          <div class="mb-2 flex min-w-0 items-center gap-2">
+            <i class="fa fa-film text-blue-400 shrink-0" />
+            <h3 class="min-w-0 break-words text-base font-bold capitalize text-neutral-100">
               {group.name}
             </h3>
             <span class="shrink-0 text-xs text-neutral-500">{group.films.length}</span>
