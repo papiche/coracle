@@ -14,9 +14,14 @@
 #   2. Builds the Svelte app with base: "./" (set in vite.config.js)
 #   3. Removes service worker (incompatible with IPFS gateways)
 #   4. Builds the signed Android release APK, adds it to IPFS under its own
-#      CID, and writes dist/apk-info.json so the published site can link
-#      straight to /ipfs/<APK_CID> (see About.svelte) — skipped automatically
-#      if the Android SDK / release keystore isn't set up (--skip-apk to force)
+#      CID, and stamps <meta name="coracle-apk-cid"/filename"> tags into
+#      dist/index.html so the published site can link straight to
+#      /ipfs/<APK_CID>/<filename> (see About.svelte) — reading from the
+#      already-loaded DOM instead of a runtime fetch() sidesteps relative-URL
+#      ambiguity when the page is opened without a trailing slash (some
+#      /ipfs/<CID> links don't get gateway-redirected to /ipfs/<CID>/).
+#      Skipped automatically if the Android SDK / release keystore isn't set
+#      up (--skip-apk to force).
 #   5. Publishes dist/ to IPFS via `ipfs add -rw`
 #   6. Prints the gateway URL
 ##############################################################################
@@ -106,8 +111,11 @@ if [ "$SKIP_APK" = "no" ]; then
         cp "$APK" "$APK_TMPDIR/$APK_FILENAME"
         APK_CID=$(ipfs add -wq --pin --cid-version 1 "$APK_TMPDIR/$APK_FILENAME" | tail -1)
         rm -rf "$APK_TMPDIR"
-        printf '{"cid":"%s","version":"%s","filename":"%s"}\n' \
-          "$APK_CID" "$VERSION_NAME" "$APK_FILENAME" > dist/apk-info.json
+        # Vite's output has no literal </head> (browsers infer it before <body>),
+        # so inject right after the opening <head> tag instead.
+        sed -i \
+          -e "s#<head>#<head><meta name=\"coracle-apk-cid\" content=\"${APK_CID}\"><meta name=\"coracle-apk-filename\" content=\"${APK_FILENAME}\">#" \
+          dist/index.html
         echo "✅ APK added to IPFS: /ipfs/${APK_CID}/${APK_FILENAME} (v${VERSION_NAME}, $(du -h "$APK" | cut -f1))"
       else
         echo "WARNING: gradle succeeded but $APK not found — skipping APK."

@@ -1,7 +1,6 @@
 <script lang="ts">
   import {onMount} from "svelte"
   import {_} from "svelte-i18n"
-  import {Capacitor} from "@capacitor/core"
   import Popover from "src/partials/Popover.svelte"
   import Link from "src/partials/Link.svelte"
   import Button from "src/partials/Button.svelte"
@@ -21,11 +20,18 @@
   let builtByPubkey = env.PLATFORM_PUBKEY
 
   // Only the IPFS build (build-web-compatible-ipfs.sh) publishes the Android
-  // APK to its own IPFS CID and writes this file alongside the web app —
-  // app.coracle.social / dev.coracle.social don't have it.
-  let apkUrl = ""
-  let apkVersion = ""
-  const isNative = Capacitor.isNativePlatform()
+  // APK to its own IPFS CID and stamps these <meta> tags into dist/index.html
+  // — app.coracle.social, dev.coracle.social, and the native app itself (its
+  // index.html is copied before this stamping step) don't have them. Read
+  // from the already-loaded DOM (not a fetch()) so it isn't affected by
+  // relative-URL ambiguity when the page is opened as /ipfs/<CID> without a
+  // trailing slash.
+  const apkCid = document.querySelector('meta[name="coracle-apk-cid"]')?.getAttribute("content")
+  const apkFilename = document
+    .querySelector('meta[name="coracle-apk-filename"]')
+    ?.getAttribute("content")
+  const apkUrl = apkCid && apkFilename ? `${resolveIpfsUrl(apkCid)}/${apkFilename}` : ""
+  const apkVersion = apkFilename?.replace(/^coracle-/, "").replace(/\.apk$/, "") || ""
 
   onMount(async () => {
     try {
@@ -43,21 +49,6 @@
     }
 
     loadPubkeys([builtByPubkey])
-
-    if (!isNative) {
-      try {
-        const res = await fetch("./apk-info.json")
-        if (res.ok) {
-          const info = await res.json()
-          if (info.cid && info.filename) {
-            apkUrl = `${resolveIpfsUrl(info.cid)}/${info.filename}`
-            apkVersion = info.version || ""
-          }
-        }
-      } catch (err) {
-        // not this build — no APK published alongside the web app
-      }
-    }
   })
 
   document.title = $_("about.title")
