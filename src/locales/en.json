@@ -252,7 +252,9 @@
     "builtBy": "Built with 💜 by ",
     "g1fablab": "your Ğ1FabLab",
     "sourceCode": "Source Code",
-    "website": "Website"
+    "website": "Website",
+    "downloadApk": "Download Android app (APK)",
+    "downloadApkVersion": "Download Android app (APK v{version})"
   },
   "feedbackCreate": {
     "title": "Send Feedback",

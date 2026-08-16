@@ -252,7 +252,9 @@
     "builtBy": "Construit avec 💜 par ",
     "g1fablab": "votre Ğ1FabLab",
     "sourceCode": "Code source",
-    "website": "Site web"
+    "website": "Site web",
+    "downloadApk": "Telecharger l'app Android (APK)",
+    "downloadApkVersion": "Telecharger l'app Android (APK v{version})"
   },
   "feedbackCreate": {
     "title": "Envoyer un retour",

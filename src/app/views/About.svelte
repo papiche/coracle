@@ -1,6 +1,7 @@
 <script lang="ts">
   import {onMount} from "svelte"
   import {_} from "svelte-i18n"
+  import {Capacitor} from "@capacitor/core"
   import Popover from "src/partials/Popover.svelte"
   import Link from "src/partials/Link.svelte"
   import Button from "src/partials/Button.svelte"
@@ -10,6 +11,7 @@
   import {router} from "src/app/util"
   import {loadPubkeys, env} from "src/engine"
   import {resolveApiUrl} from "src/util/uplanet-detect"
+  import {resolveIpfsUrl} from "src/util/ipfs"
 
   const hash = import.meta.env.VITE_BUILD_HASH
   const openFeedbackForm = () => router.at("feedback/create").open()
@@ -17,6 +19,13 @@
   // Falls back to the build's configured platform pubkey if this station
   // isn't UPlanet, or /api/nostr/admin/captain_info is unreachable.
   let builtByPubkey = env.PLATFORM_PUBKEY
+
+  // Only the IPFS build (build-web-compatible-ipfs.sh) publishes the Android
+  // APK to its own IPFS CID and writes this file alongside the web app —
+  // app.coracle.social / dev.coracle.social don't have it.
+  let apkUrl = ""
+  let apkVersion = ""
+  const isNative = Capacitor.isNativePlatform()
 
   onMount(async () => {
     try {
@@ -34,6 +43,21 @@
     }
 
     loadPubkeys([builtByPubkey])
+
+    if (!isNative) {
+      try {
+        const res = await fetch("./apk-info.json")
+        if (res.ok) {
+          const info = await res.json()
+          if (info.cid && info.filename) {
+            apkUrl = `${resolveIpfsUrl(info.cid)}/${info.filename}`
+            apkVersion = info.version || ""
+          }
+        }
+      } catch (err) {
+        // not this build — no APK published alongside the web app
+      }
+    }
   })
 
   document.title = $_("about.title")
@@ -97,6 +121,18 @@
         </div>
         <div slot="tooltip">{$_("about.website")}</div>
       </Popover>
+      {#if apkUrl}
+        <Popover triggerType="mouseenter">
+          <div slot="trigger">
+            <Link external href={apkUrl}><i class="fa fa-android" /></Link>
+          </div>
+          <div slot="tooltip">
+            {apkVersion
+              ? $_("about.downloadApkVersion", {values: {version: apkVersion}})
+              : $_("about.downloadApk")}
+          </div>
+        </Popover>
+      {/if}
     </p>
   </div>
 </FlexColumn>
