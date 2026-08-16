@@ -2,12 +2,13 @@
 ##############################################################################
 # build-web-compatible-ipfs.sh — Build Coracle for IPFS deployment
 #
-# Usage:  ./build-web-compatible-ipfs.sh [gateway_base_url] [--skip-apk]
+# Usage:  ./build-web-compatible-ipfs.sh [gateway_base_url] [--skip-apk] [--skip-dns]
 #
 # Example:
 #   ./build-web-compatible-ipfs.sh
 #   ./build-web-compatible-ipfs.sh https://dweb.link
 #   ./build-web-compatible-ipfs.sh "" --skip-apk
+#   ./build-web-compatible-ipfs.sh "" --skip-dns
 #
 # The script:
 #   1. Overrides env vars to use relative paths (./images/...)
@@ -23,14 +24,25 @@
 #      Skipped automatically if the Android SDK / release keystore isn't set
 #      up (--skip-apk to force).
 #   5. Publishes dist/ to IPFS via `ipfs add -rw`
-#   6. Prints the gateway URL
+#   6. Repoints coracle.astroport.one's DNSLink at the new root CID via
+#      ovh.me.sh (Astroport.ONE) — skipped automatically if that script or
+#      its OVH credentials aren't available (--skip-dns to force).
+#   7. Prints the gateway URL
 ##############################################################################
 
 set -e
 
+MY_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 GATEWAY="${1:-https://ipfs.copylaradio.com}"
 SKIP_APK="no"
-[[ "${2:-}" == "--skip-apk" ]] && SKIP_APK="yes"
+SKIP_DNS="no"
+for arg in "${@:2}"; do
+  case "$arg" in
+    --skip-apk) SKIP_APK="yes" ;;
+    --skip-dns) SKIP_DNS="yes" ;;
+  esac
+done
 
 echo "=== Building Coracle for IPFS ==="
 
@@ -133,6 +145,28 @@ echo "--- Publishing to IPFS ---"
 IPFS_OUTPUT=$(ipfs add -rw --pin dist/*)
 ROOT_CID=$(echo "$IPFS_OUTPUT" | tail -1 | awk '{print $2}')
 
+# Repoint coracle.astroport.one's DNSLink at the new root CID.
+DNS_STATUS="skipped"
+if [ "$SKIP_DNS" = "no" ]; then
+  echo "--- Updating DNSLink (coracle.astroport.one) ---"
+  OVH_SCRIPT="${MY_PATH}/../Astroport.ONE/admin/system/ovh.me.sh"
+  [ -f "$OVH_SCRIPT" ] || OVH_SCRIPT="${HOME}/.zen/Astroport.ONE/admin/system/ovh.me.sh"
+  [ -f "$OVH_SCRIPT" ] || OVH_SCRIPT="${HOME}/workspace/AAA/Astroport.ONE/admin/system/ovh.me.sh"
+  if [ -f "$OVH_SCRIPT" ]; then
+    if bash "$OVH_SCRIPT" upsert coracle "$ROOT_CID" astroport.one; then
+      DNS_STATUS="updated"
+    else
+      DNS_STATUS="failed (see warnings above — update manually if needed)"
+    fi
+  else
+    echo "WARNING: ovh.me.sh not found — update DNSLink manually:"
+    echo "  ovh.me.sh upsert coracle $ROOT_CID astroport.one"
+    DNS_STATUS="ovh.me.sh not found"
+  fi
+else
+  echo "--- Skipping DNSLink update (--skip-dns) ---"
+fi
+
 echo ""
 echo "=== Published to IPFS ==="
 echo "CID:  $ROOT_CID"
@@ -140,5 +174,6 @@ echo "URL:  ${GATEWAY}/ipfs/${ROOT_CID}/"
 if [ -n "${APK_CID:-}" ]; then
   echo "APK:  ${GATEWAY}/ipfs/${APK_CID}/${APK_FILENAME}"
 fi
+echo "DNS:  coracle.astroport.one → ${DNS_STATUS}"
 echo ""
 echo "$IPFS_OUTPUT"
