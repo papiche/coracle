@@ -253,7 +253,9 @@
     "g1fablab": "tu Ğ1FabLab",
     "sourceCode": "Código fuente",
     "website": "Sitio web",
-    "downloadApk": "Descargar la app Android (APK)"
+    "installMobile": "Instala la app Android",
+    "installMobileDescription": "Notificaciones push, inicio de sesión con una app firmante dedicada (Amber), y más — sin necesidad de Google Play.",
+    "installMobileCta": "Obtener la app Android"
   },
   "feedbackCreate": {
     "title": "Enviar comentarios",
@@ -617,6 +619,19 @@
     "episode": "episodio",
     "episodes": "episodios",
     "genreOther": "Otro"
+  },
+  "videoEdit": {
+    "title": "Editar vídeo",
+    "hint": "Los likes y comentarios existentes permanecerán vinculados a la publicación original.",
+    "titleRequired": "Se requiere un título",
+    "seriesName": "Nombre de la serie",
+    "episodeName": "Nombre del episodio",
+    "season": "Temporada",
+    "episode": "Episodio",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saved": "¡Vídeo actualizado!",
+    "saveFailed": "Error al actualizar"
   },
   "vocaux": {
     "title": "Vocaux — Mensajes de voz",

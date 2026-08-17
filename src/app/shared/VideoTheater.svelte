@@ -3,9 +3,11 @@
   import {getReplyFilters, NOTE, COMMENT, REACTION, ZAP_RESPONSE} from "@welshman/util"
   import type {Thunk} from "@welshman/app"
   import {Router, addMaximalFallbacks} from "@welshman/router"
+  import {pubkey} from "@welshman/app"
   import NoteHeader from "src/app/shared/NoteHeader.svelte"
   import NoteActions from "src/app/shared/NoteActions.svelte"
   import NoteReply from "src/app/shared/NoteReply.svelte"
+  import VideoEditForm from "src/app/shared/VideoEditForm.svelte"
   import {extractVideoInfo, cleanVideoTitle} from "src/util/video"
   import {getSetting, env, myLoad} from "src/engine"
   import {router} from "src/app/util"
@@ -17,6 +19,7 @@
 
   let currentIndex = index
   let replyIsOpen = false
+  let showEditForm = false
 
   $: event = events[currentIndex]
   $: info = event ? extractVideoInfo(event) : null
@@ -50,6 +53,23 @@
 
   const onReplyPublish = (thunk: Thunk) => {
     replyIsOpen = false
+  }
+
+  const openEditForm = () => {
+    showEditForm = true
+  }
+
+  const closeEditForm = () => {
+    showEditForm = false
+  }
+
+  // Same confirmation flow as Message.svelte's delete button (NoteDelete.svelte)
+  const removeVideo = () => {
+    router.at("notes").of(event.id).at("delete").qp({kind: event.kind}).open()
+  }
+
+  const onEditSaved = (newEvent: TrustedEvent) => {
+    events = [...events.slice(0, currentIndex), newEvent, ...events.slice(currentIndex + 1)]
   }
 
   const onKeydown = (e: KeyboardEvent) => {
@@ -89,12 +109,24 @@
 
 <div class="z-50 fixed inset-0 flex flex-col bg-black">
   <div class="flex items-center justify-between p-3">
-    <button class="text-2xl text-white" on:click={onClose}>
-      <i class="fa fa-times" />
-    </button>
     {#if events.length > 1}
       <span class="text-sm text-neutral-400">{currentIndex + 1} / {events.length}</span>
+    {:else}
+      <span />
     {/if}
+    <div class="flex items-center gap-4">
+      {#if event && event.pubkey === $pubkey}
+        <button class="text-xl text-white" on:click={openEditForm}>
+          <i class="fa fa-pen" />
+        </button>
+        <button class="text-xl text-white" on:click={removeVideo}>
+          <i class="fa fa-trash" />
+        </button>
+      {/if}
+      <button class="text-2xl text-white" on:click={onClose}>
+        <i class="fa fa-times" />
+      </button>
+    </div>
   </div>
 
   {#if event && info}
@@ -150,3 +182,7 @@
     </div>
   {/if}
 </div>
+
+{#if showEditForm && event}
+  <VideoEditForm {event} onClose={closeEditForm} onSaved={onEditSaved} />
+{/if}

@@ -83,6 +83,21 @@
       </FlexColumn>
     </Card>
   </div>
+  {#if !isNative}
+    <Card>
+      <FlexColumn class="items-center py-6 text-center">
+        <i class="fa fa-mobile-screen-button text-4xl text-accent" />
+        <h3 class="text-xl">{$_("about.installMobile")}</h3>
+        <p>{$_("about.installMobileDescription")}</p>
+        <div class="flex justify-center">
+          <Link class="btn btn-accent" external href={apkPageUrl}>
+            <i class="fa fa-android" />
+            {$_("about.installMobileCta")}
+          </Link>
+        </div>
+      </FlexColumn>
+    </Card>
+  {/if}
   <div class="flex flex-col gap-4">
     <p class="text-center">
       {$_("about.builtBy")}<Link
@@ -93,7 +108,7 @@
     <p class="flex justify-center gap-4">
       <Popover triggerType="mouseenter">
         <div slot="trigger">
-          <Link external href="https://github.com/coracle-social/coracle"
+          <Link external href="https://github.com/papiche/coracle"
             ><i class="fa fa-code-branch" /></Link>
         </div>
         <div slot="tooltip">{$_("about.sourceCode")}</div>
@@ -106,14 +121,6 @@
         </div>
         <div slot="tooltip">{$_("about.website")}</div>
       </Popover>
-      {#if !isNative}
-        <Popover triggerType="mouseenter">
-          <div slot="trigger">
-            <Link external href={apkPageUrl}><i class="fa fa-android" /></Link>
-          </div>
-          <div slot="tooltip">{$_("about.downloadApk")}</div>
-        </Popover>
-      {/if}
     </p>
   </div>
 </FlexColumn>
