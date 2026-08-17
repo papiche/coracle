@@ -2,8 +2,9 @@
   import {_} from "svelte-i18n"
   import {onMount} from "svelte"
   import {uniqBy} from "@welshman/lib"
-  import {LONG_FORM, getTagValue, getTagValues} from "@welshman/util"
+  import {LONG_FORM, getIdOrAddress, getTagValue, getTagValues} from "@welshman/util"
   import type {TrustedEvent} from "@welshman/util"
+  import {Router} from "@welshman/router"
   import {pubkey, signer, makeFeedController} from "@welshman/app"
   import {makeIntersectionFeed, makeKindFeed, makeAuthorFeed} from "@welshman/feeds"
   import {createScroller} from "src/util/misc"
@@ -254,10 +255,16 @@
         {@const summary = getTagValue("summary", event.tags) || event.content?.slice(0, 150) || ""}
         {@const image = getTagValue("image", event.tags)}
         {@const tags = getTagValues("t", event.tags)}
+        {@const lat = getTagValue("latitude", event.tags)}
+        {@const lon = getTagValue("longitude", event.tags)}
         <div in:fly={{y: 20}} class="min-w-0">
           <button
             class="group flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-xl border border-transparent bg-neutral-900 text-left transition-all hover:-translate-y-0.5 hover:border-accent"
-            on:click={() => router.at("notes").of(event.id).open()}>
+            on:click={() =>
+              router
+                .at("notes")
+                .of(getIdOrAddress(event), {relays: Router.get().Event(event).limit(10).getUrls()})
+                .open()}>
             <!-- Cover image -->
             {#if image}
               <div class="aspect-video w-full overflow-hidden bg-neutral-800">
@@ -289,6 +296,11 @@
               <div class="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
                 <span class="text-[10px] text-neutral-600">{formatDate(event.created_at)}</span>
                 <ExpirationBadge tags={event.tags} />
+                {#if lat && lon}
+                  <span class="text-[10px] text-neutral-500" title="UMAP {lat}_{lon}">
+                    <i class="fa fa-map-marker-alt" />
+                  </span>
+                {/if}
                 {#if event.pubkey === $pubkey}
                   <span class="bg-accent/20 rounded-full px-1.5 py-0.5 text-[10px] text-accent">
                     {$_("blog.myArticle") || "Mon article"}

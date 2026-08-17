@@ -1,6 +1,7 @@
 <script lang="ts">
   import {onMount} from "svelte"
   import {_} from "svelte-i18n"
+  import {Capacitor} from "@capacitor/core"
   import Popover from "src/partials/Popover.svelte"
   import Link from "src/partials/Link.svelte"
   import Button from "src/partials/Button.svelte"
@@ -10,7 +11,6 @@
   import {router} from "src/app/util"
   import {loadPubkeys, env} from "src/engine"
   import {resolveApiUrl} from "src/util/uplanet-detect"
-  import {resolveIpfsUrl} from "src/util/ipfs"
 
   const hash = import.meta.env.VITE_BUILD_HASH
   const openFeedbackForm = () => router.at("feedback/create").open()
@@ -19,19 +19,13 @@
   // isn't UPlanet, or /api/nostr/admin/captain_info is unreachable.
   let builtByPubkey = env.PLATFORM_PUBKEY
 
-  // Only the IPFS build (build-web-compatible-ipfs.sh) publishes the Android
-  // APK to its own IPFS CID and stamps these <meta> tags into dist/index.html
-  // — app.coracle.social, dev.coracle.social, and the native app itself (its
-  // index.html is copied before this stamping step) don't have them. Read
-  // from the already-loaded DOM (not a fetch()) so it isn't affected by
-  // relative-URL ambiguity when the page is opened as /ipfs/<CID> without a
-  // trailing slash.
-  const apkCid = document.querySelector('meta[name="coracle-apk-cid"]')?.getAttribute("content")
-  const apkFilename = document
-    .querySelector('meta[name="coracle-apk-filename"]')
-    ?.getAttribute("content")
-  const apkUrl = apkCid && apkFilename ? `${resolveIpfsUrl(apkCid)}/${apkFilename}` : ""
-  const apkVersion = apkFilename?.replace(/^coracle-/, "").replace(/\.apk$/, "") || ""
+  // build-web-compatible-ipfs.sh bundles www/ (landing + comparison page,
+  // download link for the APK inside it) into dist/www/ — same CID as the
+  // rest of the app, so a plain relative link always resolves, with no
+  // separate publish/DNS step to keep in sync. Hidden in the native app
+  // itself, which obviously doesn't need to download itself.
+  const apkPageUrl = "./www/"
+  const isNative = Capacitor.isNativePlatform()
 
   onMount(async () => {
     try {
@@ -112,16 +106,12 @@
         </div>
         <div slot="tooltip">{$_("about.website")}</div>
       </Popover>
-      {#if apkUrl}
+      {#if !isNative}
         <Popover triggerType="mouseenter">
           <div slot="trigger">
-            <Link external href={apkUrl}><i class="fa fa-android" /></Link>
+            <Link external href={apkPageUrl}><i class="fa fa-android" /></Link>
           </div>
-          <div slot="tooltip">
-            {apkVersion
-              ? $_("about.downloadApkVersion", {values: {version: apkVersion}})
-              : $_("about.downloadApk")}
-          </div>
+          <div slot="tooltip">{$_("about.downloadApk")}</div>
         </Popover>
       {/if}
     </p>

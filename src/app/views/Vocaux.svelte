@@ -1,130 +1,156 @@
 <script lang="ts">
-  import {onMount, onDestroy} from "svelte"
+  import {onMount} from "svelte"
   import {_} from "svelte-i18n"
-  import {detectUPlanetServices} from "src/util/uplanet-detect"
+  import {uniqBy} from "@welshman/lib"
+  import type {TrustedEvent} from "@welshman/util"
+  import {makeFeedController} from "@welshman/app"
+  import {pubkey, signer} from "@welshman/app"
+  import {makeIntersectionFeed, makeKindFeed} from "@welshman/feeds"
+  import {createScroller} from "src/util/misc"
+  import {fly} from "src/util/transition"
+  import Button from "src/partials/Button.svelte"
+  import Spinner from "src/partials/Spinner.svelte"
+  import FlexColumn from "src/partials/FlexColumn.svelte"
+  import VocalCard from "src/app/shared/VocalCard.svelte"
+  import VocalRecorder from "src/app/shared/VocalRecorder.svelte"
+  import {sortEventsDesc} from "src/engine"
+  import {VOCAL_ROOT, VOCAL_REPLY} from "src/util/vocals"
 
-  const uplanet = detectUPlanetServices()
-  // UPassport serves vocals-read.html at /vocals-read on the u. API server
-  const vocalsUrl = uplanet ? `${uplanet.apiUrl}/vocals-read` : null
+  let element: HTMLElement
+  let events: TrustedEvent[] = []
+  let buffer: TrustedEvent[] = []
+  let exhausted = false
+  let abort = new AbortController()
+  let ctrl: ReturnType<typeof makeFeedController> | null = null
+  let loading = false
 
-  let iframeEl: HTMLIFrameElement
+  let showRecorder = false
+  let replyTo: {id: string; pubkey: string; relay?: string} | undefined = undefined
 
-  /**
-   * When the iframe loads, proactively send the current NOSTR public key so
-   * vocals-read does not need to read window.parent.userPubkey (which would
-   * throw a DOMException in a cross-origin context).
-   */
-  const handleLoad = async () => {
-    if (!iframeEl?.contentWindow) return
-    const nostr = (window as any).nostr
-    if (!nostr) return
-    try {
-      const pubkey = await nostr.getPublicKey()
-      iframeEl.contentWindow.postMessage(
-        {type: "nostr-state", userPubkey: pubkey, isNostrConnected: true, nostrRelay: null},
-        "*",
-      )
-    } catch (_) {
-      // Extension not available or user denied – ignore
-    }
+  const feed = {
+    title: "Vocaux",
+    identifier: "vocaux",
+    description: "Voice messages",
+    definition: makeIntersectionFeed(makeKindFeed(VOCAL_ROOT, VOCAL_REPLY)),
   }
 
-  const handleMessage = async (event: MessageEvent) => {
-    if (!event.data) return
-    if (!iframeEl?.contentWindow) return
+  const loadEvents = () => {
+    abort.abort()
+    abort = new AbortController()
+    events = []
+    buffer = []
+    exhausted = false
+    loading = false
 
-    // vocals-read requests the current NOSTR state (cross-origin safe path)
-    if (event.data.type === "nostr-state-request") {
-      const nostr = (window as any).nostr
-      if (!nostr) return
-      try {
-        const pubkey = await nostr.getPublicKey()
-        iframeEl.contentWindow.postMessage(
-          {type: "nostr-state", userPubkey: pubkey, isNostrConnected: true, nostrRelay: null},
-          "*",
-        )
-      } catch (_) {
-        // ignore
-      }
+    ctrl = makeFeedController({
+      feed: feed.definition,
+      useWindowing: true,
+      signal: abort.signal,
+      onEvent: e => {
+        buffer.push(e)
+      },
+      onExhausted: () => {
+        exhausted = true
+        loading = false
+      },
+    })
+
+    loadMore()
+  }
+
+  const loadMore = async () => {
+    if (!ctrl || loading) return
+    loading = true
+    const current = ctrl
+
+    await current.load(20)
+
+    if (current !== ctrl) {
+      loading = false
       return
     }
 
-    if (event.data.type !== "nostr-request") return
+    buffer = uniqBy(e => e.id, sortEventsDesc(buffer))
+    events = [...events, ...buffer.splice(0, 20)]
+    loading = false
+  }
 
-    const {requestId, method, params} = event.data
-    const nostr = (window as any).nostr
+  const openNewMessage = () => {
+    replyTo = undefined
+    showRecorder = true
+  }
 
-    const reply = (success: boolean, data?: any, error?: string) =>
-      iframeEl?.contentWindow?.postMessage(
-        {type: "nostr-response", requestId, success, data, error},
-        "*",
-      )
+  const openReply = (parent: TrustedEvent) => {
+    replyTo = {id: parent.id, pubkey: parent.pubkey}
+    showRecorder = true
+  }
 
-    try {
-      if (!nostr) throw new Error("No NOSTR extension available")
+  const closeRecorder = () => {
+    showRecorder = false
+  }
 
-      let result: any
-
-      switch (method) {
-        case "getPublicKey":
-          result = await nostr.getPublicKey()
-          break
-        case "signEvent":
-          result = await nostr.signEvent(params[0])
-          break
-        case "nip44.encrypt":
-          result = await nostr.nip44.encrypt(params[0], params[1])
-          break
-        case "nip44.decrypt":
-          result = await nostr.nip44.decrypt(params[0], params[1])
-          break
-        case "nip04.encrypt":
-          result = await nostr.nip04?.encrypt(params[0], params[1])
-          break
-        case "nip04.decrypt":
-          result = await nostr.nip04?.decrypt(params[0], params[1])
-          break
-        default:
-          throw new Error(`Unknown NOSTR method: ${method}`)
-      }
-
-      reply(true, result)
-    } catch (err: any) {
-      reply(false, undefined, err?.message || "Unknown error")
-    }
+  const onPublished = () => {
+    loadEvents()
   }
 
   onMount(() => {
-    window.addEventListener("message", handleMessage)
-  })
-
-  onDestroy(() => {
-    window.removeEventListener("message", handleMessage)
+    loadEvents()
+    const scroller = createScroller(loadMore, {element, delay: 300, threshold: 3000})
+    return () => {
+      scroller.stop()
+      abort.abort()
+    }
   })
 
   document.title = $_("menu.vocaux")
 </script>
 
-{#if vocalsUrl}
-  <!--
-    Full-height iframe embedding the UPassport vocals.html page.
-    The NOSTR signing bridge (handleMessage above) forwards postMessage
-    requests from the iframe to the browser extension, then relays the response.
-    The "allow" attribute grants the iframe access to microphone, camera and
-    geolocation which are required to record voice/video messages.
-  -->
-  <iframe
-    bind:this={iframeEl}
-    src={vocalsUrl}
-    title={$_("vocaux.title")}
-    class="h-full w-full border-0"
-    style="height: calc(100vh - 60px);"
-    allow="microphone; camera; geolocation"
-    on:load={handleLoad} />
-{:else}
-  <div class="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
-    <i class="fa fa-microphone-slash fa-3x text-tinted-500" />
-    <p class="text-lg text-tinted-400">{$_("vocaux.noUplanet")}</p>
-    <p class="text-sm text-tinted-500">{$_("vocaux.noUplanetDesc")}</p>
+<FlexColumn bind:element>
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <i class="fa fa-microphone fa-lg" />
+      <h2 class="staatliches text-2xl">{$_("menu.vocaux")}</h2>
+    </div>
+    {#if $signer}
+      <Button class="btn btn-accent" on:click={openNewMessage}>
+        <i class="fa fa-microphone" />
+        {$_("vocaux.newMessage") || "Nouveau message vocal"}
+      </Button>
+    {/if}
   </div>
+
+  {#if !$pubkey}
+    <div class="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+      <i class="fa fa-microphone-slash fa-3x text-tinted-500" />
+      <p class="text-lg text-tinted-400">
+        {$_("vocaux.loginRequired") ||
+          "Connectez-vous pour écouter et enregistrer des messages vocaux."}
+      </p>
+    </div>
+  {:else}
+    <div class="flex flex-col gap-3">
+      {#each events as event (event.id)}
+        <div in:fly={{y: 20}}>
+          <VocalCard {event} onReply={openReply} />
+        </div>
+      {/each}
+    </div>
+
+    {#if loading && events.length === 0}
+      <Spinner />
+    {:else if !exhausted && events.length > 0}
+      <Spinner />
+    {:else if exhausted && events.length === 0}
+      <div class="py-16 text-center">
+        <i class="fa fa-microphone-slash mb-3 text-5xl text-neutral-700" />
+        <p class="text-neutral-400">
+          {$_("vocaux.empty") || "Aucun message vocal pour l'instant."}
+        </p>
+      </div>
+    {/if}
+  {/if}
+</FlexColumn>
+
+{#if showRecorder}
+  <VocalRecorder {replyTo} onClose={closeRecorder} {onPublished} />
 {/if}

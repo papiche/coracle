@@ -253,8 +253,7 @@
     "g1fablab": "votre Ğ1FabLab",
     "sourceCode": "Code source",
     "website": "Site web",
-    "downloadApk": "Telecharger l'app Android (APK)",
-    "downloadApkVersion": "Telecharger l'app Android (APK v{version})"
+    "downloadApk": "Telecharger l'app Android (APK)"
   },
   "feedbackCreate": {
     "title": "Envoyer un retour",
@@ -621,8 +620,25 @@
   },
   "vocaux": {
     "title": "Vocaux — Messages vocaux",
-    "noUplanet": "UPlanet non detecte",
-    "noUplanetDesc": "Cette fonctionnalite necessite une installation UPlanet locale (u.domaine ou localhost:54321)."
+    "loginRequired": "Connectez-vous pour ecouter et enregistrer des messages vocaux.",
+    "newMessage": "Nouveau message vocal",
+    "newReply": "Repondre en vocal",
+    "empty": "Aucun message vocal pour l'instant.",
+    "tapToRecord": "Appuyez pour enregistrer",
+    "micDenied": "Acces au microphone refuse",
+    "rerecord": "Recommencer",
+    "messageTitle": "Titre",
+    "titlePlaceholder": "Un mot pour ce message…",
+    "titleRequired": "Un titre est requis",
+    "description": "Description (optionnel)",
+    "private": "Message prive (chiffre)",
+    "recipientRequired": "Choisissez un destinataire",
+    "geolocate": "Ajouter la position (UMAP)",
+    "locationFailed": "Impossible d'obtenir la position",
+    "publish": "Publier",
+    "publishing": "Publication…",
+    "published": "Message vocal publie !",
+    "publishFailed": "Echec de la publication"
   },
   "blog": {
     "write": "Écrire",
@@ -633,7 +649,13 @@
     "titleRequired": "Le titre est requis",
     "summary": "Résumé",
     "summaryPlaceholder": "Une phrase de présentation…",
-    "coverImage": "Image de couverture (URL)",
+    "coverImage": "Image de couverture",
+    "imageUploadFailed": "Echec de l'envoi de l'image",
+    "geolocate": "Publier avec geolocalisation (UMAP)",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "useMyLocation": "Ma position",
+    "locationFailed": "Impossible d'obtenir la position",
     "tags": "Tags (séparés par virgule)",
     "contentPlaceholder": "# Mon article\n\nÉcrivez en Markdown…",
     "contentRequired": "Le contenu est requis",

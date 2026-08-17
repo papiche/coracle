@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coracle Ẑ — Application Android</title>
+    <style>
+      :root {
+        --accent: #fc560e;
+        --bg: #171717;
+        --bg-card: #262626;
+        --border: #404040;
+        --text: #f5f5f5;
+        --text-dim: #a3a3a3;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 2.5rem 1.5rem 4rem;
+      }
+      .hero {
+        text-align: center;
+        margin-bottom: 2.5rem;
+      }
+      .hero h1 {
+        font-size: 2.25rem;
+        margin: 0 0 0.5rem;
+        letter-spacing: 0.02em;
+      }
+      .hero p {
+        color: var(--text-dim);
+        font-size: 1.05rem;
+        max-width: 520px;
+        margin: 0 auto;
+      }
+      .download {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 2rem 0;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        background: var(--accent);
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+        padding: 0.9rem 1.8rem;
+        border-radius: 0.75rem;
+        text-decoration: none;
+        transition: transform 0.15s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+      .meta {
+        color: var(--text-dim);
+        font-size: 0.85rem;
+      }
+      .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .card h2 {
+        margin-top: 0;
+        font-size: 1.15rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 0.6rem 0.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        color: var(--text-dim);
+        font-weight: 600;
+      }
+      td:not(:first-child),
+      th:not(:first-child) {
+        text-align: center;
+      }
+      .yes {
+        color: #4ade80;
+      }
+      .no {
+        color: var(--text-dim);
+      }
+      ul {
+        padding-left: 1.2rem;
+        margin: 0.5rem 0;
+      }
+      li {
+        margin: 0.4rem 0;
+      }
+      .back {
+        display: block;
+        text-align: center;
+        margin-top: 2rem;
+        color: var(--text-dim);
+        font-size: 0.9rem;
+      }
+      .back a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="hero">
+        <h1>🄲🄾🅁🄰🄲🄻🄴 Ẑ</h1>
+        <p>
+          Client Nostr décentralisé avec intégration coopérative UPlanet/Ẑen. L'application Android
+          va plus loin que la version web installée dans votre navigateur.
+        </p>
+      </div>
+
+      <div class="download">
+        <a class="btn" href="./coracle.apk" download="coracle.apk">
+          <span>📥</span>
+          Télécharger l'APK
+        </a>
+        <span class="meta" id="apk-size"></span>
+      </div>
+
+      <div class="card">
+        <h2>Pourquoi une application native ?</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Fonctionnalité</th>
+              <th>Web (PWA)</th>
+              <th>App Android</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Signature de clé via une app dédiée (Amber, NIP-55)</td>
+              <td class="no">✕</td>
+              <td class="yes">✓</td>
+            </tr>
+            <tr>
+              <td>Extension navigateur (NIP-07) disponible</td>
+              <td class="no">✕ (mobile)</td>
+              <td class="yes">✓ (PC)</td>
+            </tr>
+            <tr>
+              <td>Notifications natives</td>
+              <td class="no">Limitées</td>
+              <td class="yes">✓</td>
+            </tr>
+            <tr>
+              <td>Enregistrement vocal (micro)</td>
+              <td class="yes">✓</td>
+              <td class="yes">✓ optimisé</td>
+            </tr>
+            <tr>
+              <td>Sans Google Play (F-Droid)</td>
+              <td class="yes">✓</td>
+              <td class="yes">✓</td>
+            </tr>
+            <tr>
+              <td>Installation</td>
+              <td class="yes">Aucune</td>
+              <td class="no">APK signé</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Sur mobile, les extensions de navigateur n'existent pas</h2>
+        <p style="color: var(--text-dim); margin-bottom: 0">
+          C'est la vraie limite de la version web sur téléphone : aucune extension NIP-07 (comme
+          nos2x ou Alby) n'est disponible. L'application Android résout ce problème en se connectant
+          directement à un signeur Nostr comme
+          <a href="https://github.com/greenart7c3/Amber" style="color: var(--accent)">Amber</a>
+          via NIP-55 — votre clé privée ne quitte jamais l'app signeur.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Écosystème UPlanet/Ẑen</h2>
+        <ul style="color: var(--text-dim)">
+          <li>MULTIPASS et Ẑen : cooperative economy adossée à Ğ1 (June)</li>
+          <li>Messages vocaux natifs avec géolocalisation UMAP</li>
+          <li>Vidéos, blog géolocalisé, uDRIVE chiffré</li>
+        </ul>
+      </div>
+
+      <div class="card" style="text-align: center">
+        <h2>🍏 Vous préférez iPhone ?</h2>
+        <p style="color: var(--text-dim)">
+          Il n'y a pas encore de version iOS — la construire a un coût réel (compte développeur
+          Apple, machine de build macOS, temps de portage). Votre contribution en € est convertie en
+          Ẑen R&D (règle coopérative 3×1/3 : Trésorerie / R&D / Actifs) qui financent ce
+          développement, aux côtés du reste de l'infrastructure UPlanet.
+        </p>
+        <a
+          class="btn"
+          style="background: transparent; border: 1px solid var(--accent); color: var(--accent)"
+          href="https://opencollective.com/monnaie-libre/contribute"
+          target="_blank"
+          rel="noopener">
+          <span>🍏</span>
+          Financer la version iOS
+        </a>
+      </div>
+
+      <p class="back">← <a href="../">Retour à Coracle Ẑ</a></p>
+    </div>
+
+    <script>
+      fetch("./coracle.apk", {method: "HEAD"})
+        .then(res => {
+          const len = res.headers.get("content-length")
+          if (len) {
+            const mb = (parseInt(len, 10) / 1024 / 1024).toFixed(1)
+            document.getElementById("apk-size").textContent = `${mb} Mo`
+          }
+        })
+        .catch(() => {})
+    </script>
+  </body>
+</html>

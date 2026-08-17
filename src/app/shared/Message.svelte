@@ -8,7 +8,7 @@
   import Modal from "src/partials/Modal.svelte"
   import Popover from "src/partials/Popover.svelte"
   import Link from "src/partials/Link.svelte"
-  import NoteContent from "src/app/shared/NoteContent.svelte"
+  import {renderChatMarkdown} from "src/util/markdown"
   import PersonCircle from "src/app/shared/PersonCircle.svelte"
   import PersonName from "src/app/shared/PersonName.svelte"
   import NoteInfo from "src/app/shared/NoteInfo.svelte"
@@ -66,7 +66,7 @@
           </div>
           <img src={view.imageUrl} alt={view.text} class="max-w-full rounded" />
         {:else}
-          <NoteContent showEntire note={{...message, content: view.text}} />
+          <div class="long-form-content break-words">{@html renderChatMarkdown(view.text)}</div>
         {/if}
       {:catch}
         <p class="text-neutral-400">🔒 Unable to decrypt this message</p>

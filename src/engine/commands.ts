@@ -9,10 +9,11 @@ import {
   signer,
   tagPubkey,
   userRelayList,
+  userBlossomServerList,
   publishThunk,
   sendWrapped,
 } from "@welshman/app"
-import {append, sha256, remove, nthNe, uniq} from "@welshman/lib"
+import {append, first, sha256, remove, nthNe, uniq} from "@welshman/lib"
 import {Nip01Signer} from "@welshman/signer"
 import type {TrustedEvent} from "@welshman/util"
 import {Router, addMaximalFallbacks, addMinimalFallbacks} from "@welshman/router"
@@ -29,6 +30,8 @@ import {
   addToListPublicly,
   makeEvent,
   getAddress,
+  getTagValue,
+  getListTags,
   isSignedEvent,
   makeList,
   uploadBlob,
@@ -37,9 +40,19 @@ import {
   removeFromList,
   getRelaysFromList,
 } from "@welshman/util"
-import {anonymous, getClientTags, sign, userFeedFavorites, withIndexers} from "src/engine/state"
+import {npubEncode} from "nostr-tools/nip19"
+import {
+  anonymous,
+  env,
+  getClientTags,
+  sign,
+  userFeedFavorites,
+  withIndexers,
+} from "src/engine/state"
 import {stripExifData} from "src/util/html"
 import {appDataKeys} from "src/util/nostr"
+import {ensureProto} from "src/util/misc"
+import {getVerifiedUPlanet} from "src/util/uplanet-detect"
 import {get} from "svelte/store"
 
 // Helpers
@@ -81,6 +94,49 @@ export const uploadFile = async (server: string, file: File, compressorOpts = {}
   const res = await uploadBlob(server, file, {authEvent})
 
   return res.json()
+}
+
+/**
+ * Upload a single image and return its URL — same resolution order as the
+ * note editor's image drop/paste handler (src/app/editor/index.ts): the
+ * user's own UPlanet station first (if verified and no Blossom server is
+ * configured), falling back to the configured/default Blossom server.
+ */
+export const uploadImage = async (file: File): Promise<string> => {
+  const userServer = getTagValue("server", getListTags(get(userBlossomServerList)))
+
+  const up = !userServer && getVerifiedUPlanet()
+  if (up) {
+    const formData = new FormData()
+    formData.append("file", file)
+    const currentPubkey = get(pubkey)
+    if (currentPubkey) {
+      try {
+        formData.append("npub", npubEncode(currentPubkey))
+      } catch {
+        // invalid pubkey — continue without npub
+      }
+    }
+    formData.append("type", "media")
+    try {
+      const res = await fetch(up.uploadUrl, {method: "POST", body: formData})
+      if (res.ok) {
+        const data = await res.json()
+        if (data.url) return data.url
+      }
+    } catch {
+      // fall through to Blossom
+    }
+  }
+
+  const server = ensureProto(userServer || first(env.BLOSSOM_URLS))
+  const {uploaded, url} = await uploadFile(server, file)
+
+  if (!uploaded) {
+    throw new Error("Server refused to process the file")
+  }
+
+  return new URL(url).pathname.split(".").length === 1 ? `${url}.${file.type.split("/")[1]}` : url
 }
 
 // Key state management

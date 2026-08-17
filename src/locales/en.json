@@ -253,8 +253,7 @@
     "g1fablab": "your Ğ1FabLab",
     "sourceCode": "Source Code",
     "website": "Website",
-    "downloadApk": "Download Android app (APK)",
-    "downloadApkVersion": "Download Android app (APK v{version})"
+    "downloadApk": "Download Android app (APK)"
   },
   "feedbackCreate": {
     "title": "Send Feedback",
@@ -621,8 +620,25 @@
   },
   "vocaux": {
     "title": "Vocaux — Voice Messages",
-    "noUplanet": "UPlanet not detected",
-    "noUplanetDesc": "This feature requires a local UPlanet installation (u.domain or localhost:54321)."
+    "loginRequired": "Log in to listen to and record voice messages.",
+    "newMessage": "New voice message",
+    "newReply": "Reply with a voice message",
+    "empty": "No voice messages yet.",
+    "tapToRecord": "Tap to record",
+    "micDenied": "Microphone access denied",
+    "rerecord": "Re-record",
+    "messageTitle": "Title",
+    "titlePlaceholder": "A word for this message…",
+    "titleRequired": "A title is required",
+    "description": "Description (optional)",
+    "private": "Private message (encrypted)",
+    "recipientRequired": "Choose a recipient",
+    "geolocate": "Add location (UMAP)",
+    "locationFailed": "Could not get your location",
+    "publish": "Publish",
+    "publishing": "Publishing…",
+    "published": "Voice message published!",
+    "publishFailed": "Failed to publish"
   },
   "blog": {
     "write": "Write",
@@ -633,8 +649,14 @@
     "titleRequired": "Title is required",
     "summary": "Summary",
     "summaryPlaceholder": "One-line description…",
-    "coverImage": "Cover Image (URL)",
+    "coverImage": "Cover Image",
+    "imageUploadFailed": "Failed to upload image",
     "tags": "Tags (comma-separated)",
+    "geolocate": "Publish with geolocation (UMAP)",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "useMyLocation": "My location",
+    "locationFailed": "Could not get your location",
     "contentPlaceholder": "# My article\n\nWrite in Markdown…",
     "contentRequired": "Content is required",
     "preview": "Preview",

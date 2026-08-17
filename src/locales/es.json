@@ -253,8 +253,7 @@
     "g1fablab": "tu Ğ1FabLab",
     "sourceCode": "Código fuente",
     "website": "Sitio web",
-    "downloadApk": "Descargar la app Android (APK)",
-    "downloadApkVersion": "Descargar la app Android (APK v{version})"
+    "downloadApk": "Descargar la app Android (APK)"
   },
   "feedbackCreate": {
     "title": "Enviar comentarios",
@@ -621,8 +620,25 @@
   },
   "vocaux": {
     "title": "Vocaux — Mensajes de voz",
-    "noUplanet": "UPlanet no detectado",
-    "noUplanetDesc": "Esta función requiere una instalación local de UPlanet (u.dominio o localhost:54321)."
+    "loginRequired": "Inicia sesión para escuchar y grabar mensajes de voz.",
+    "newMessage": "Nuevo mensaje de voz",
+    "newReply": "Responder con voz",
+    "empty": "Aún no hay mensajes de voz.",
+    "tapToRecord": "Toca para grabar",
+    "micDenied": "Acceso al micrófono denegado",
+    "rerecord": "Grabar de nuevo",
+    "messageTitle": "Título",
+    "titlePlaceholder": "Una palabra para este mensaje…",
+    "titleRequired": "Se requiere un título",
+    "description": "Descripción (opcional)",
+    "private": "Mensaje privado (cifrado)",
+    "recipientRequired": "Elige un destinatario",
+    "geolocate": "Añadir ubicación (UMAP)",
+    "locationFailed": "No se pudo obtener la ubicación",
+    "publish": "Publicar",
+    "publishing": "Publicando…",
+    "published": "¡Mensaje de voz publicado!",
+    "publishFailed": "Error al publicar"
   },
   "blog": {
     "write": "Escribir",
@@ -633,7 +649,13 @@
     "titleRequired": "El título es obligatorio",
     "summary": "Resumen",
     "summaryPlaceholder": "Una frase de presentación…",
-    "coverImage": "Imagen de portada (URL)",
+    "coverImage": "Imagen de portada",
+    "imageUploadFailed": "Error al subir la imagen",
+    "geolocate": "Publicar con geolocalización (UMAP)",
+    "latitude": "Latitud",
+    "longitude": "Longitud",
+    "useMyLocation": "Mi ubicación",
+    "locationFailed": "No se pudo obtener la ubicación",
     "tags": "Etiquetas (separadas por coma)",
     "contentPlaceholder": "# Mi artículo\n\nEscribe en Markdown…",
     "contentRequired": "El contenido es obligatorio",
