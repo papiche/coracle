@@ -16,15 +16,31 @@
  *   UPassport/routers/geo.py (/api/nip42/challenge)
  *   UPlanet/earth/lib_2_api_connect.js (sendNIP42Auth)
  */
+import type {Readable} from "svelte/store"
+import {derived, get} from "svelte/store"
 import type {TrustedEvent} from "@welshman/util"
-import {getTagValue, makeEvent} from "@welshman/util"
-import {pubkey, signer, publishThunk, waitForThunkCompletion, getThunkError} from "@welshman/app"
+import {getTagValue, makeEvent, REACTION, getReplyFilters} from "@welshman/util"
+import {deriveEvents} from "@welshman/store"
+import {Router, addMaximalFallbacks} from "@welshman/router"
+import {
+  pubkey,
+  signer,
+  repository,
+  publishThunk,
+  waitForThunkCompletion,
+  getThunkError,
+  tagEventForReaction,
+} from "@welshman/app"
 import {npubEncode} from "nostr-tools/nip19"
-import {get} from "svelte/store"
 import {sign} from "src/engine/state"
-import {signAndPublish} from "src/engine/commands"
+import {signAndPublish, deleteEvent, getClientTags, myLoad} from "src/engine"
 import {getVerifiedUPlanet} from "src/util/uplanet-detect"
 import {resolveIpfsUrl} from "src/util/ipfs"
+
+// Content values counted as a "like" by Astroport.ONE's own reaction tally
+// (NOSTR.UMAP.refresh.sh's count_likes()) — matches coracle's existing free-like
+// convention ("+", see NoteActions.svelte) so likes cast here count identically.
+const LIKE_CONTENT = "+"
 
 export const VOCAL_ROOT = 1222
 export const VOCAL_REPLY = 1244
@@ -262,6 +278,47 @@ export const publishVocalMessage = async ({
   }
 
   const template = makeEvent(replyTo ? VOCAL_REPLY : VOCAL_ROOT, {content, tags})
+
+  return signAndPublish(template)
+}
+
+/**
+ * Fetch kind-7 reactions referencing this vocal message from relays, into
+ * the local repository — required before deriveVocalLikes() below has
+ * anything to read, same pattern as Note.svelte/VideoTheater.svelte's own
+ * reaction loading.
+ */
+export const loadVocalLikes = (event: TrustedEvent) => {
+  myLoad({
+    relays: Router.get().Replies(event).policy(addMaximalFallbacks).getUrls(),
+    filters: getReplyFilters([event], {kinds: [REACTION]}),
+  })
+}
+
+/** Reactive list of "like" reactions (content "+") on this vocal message. */
+export const deriveVocalLikes = (event: TrustedEvent): Readable<TrustedEvent[]> =>
+  derived(
+    deriveEvents({repository, filters: [{kinds: [REACTION], "#e": [event.id]}]}),
+    $reactions => $reactions.filter(r => r.content === LIKE_CONTENT),
+  )
+
+/**
+ * Cast (or remove) a "+" like on a vocal message. These are the exact reaction
+ * counted server-side (Astroport.ONE's NOSTR.UMAP.refresh.sh, count_likes())
+ * to promote a UMAP-geolocated message into the SECTOR journal (≥3 likes)
+ * and then the REGION journal (≥12 likes) — see create_aggregate_journal().
+ * Requires the message to carry latitude/longitude tags to be picked up by
+ * that geographic aggregation at all.
+ */
+export const toggleVocalLike = async (event: TrustedEvent, existing: TrustedEvent[]) => {
+  const mine = existing.find(r => r.pubkey === get(pubkey))
+
+  if (mine) {
+    return deleteEvent(mine)
+  }
+
+  const tags = [...tagEventForReaction(event), ...getClientTags()]
+  const template = makeEvent(REACTION, {content: LIKE_CONTENT, tags})
 
   return signAndPublish(template)
 }

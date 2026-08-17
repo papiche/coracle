@@ -14,7 +14,16 @@
   import VocalCard from "src/app/shared/VocalCard.svelte"
   import VocalRecorder from "src/app/shared/VocalRecorder.svelte"
   import {sortEventsDesc} from "src/engine"
-  import {VOCAL_ROOT, VOCAL_REPLY} from "src/util/vocals"
+  import {VOCAL_ROOT, VOCAL_REPLY, extractVocalInfo} from "src/util/vocals"
+  import {
+    getCurrentUmap,
+    toSector,
+    toRegion,
+    matchesGeoCell,
+    geoCellLabel,
+    type GeoCell,
+    type GeoLevel,
+  } from "src/util/geo"
 
   let element: HTMLElement
   let events: TrustedEvent[] = []
@@ -26,6 +35,58 @@
 
   let showRecorder = false
   let replyTo: {id: string; pubkey: string; relay?: string} | undefined = undefined
+
+  // Geographic scope: same UMAP/SECTOR/REGION hierarchy the Astroport.ONE
+  // journals use (0.01°/0.1°/1°) — "all" shows every voice message regardless
+  // of location, the other three filter to whatever geo cell the browser's
+  // own position currently falls into.
+  type Scope = "all" | GeoLevel
+  let activeScope: Scope = "all"
+  let myUmap: GeoCell | null = null
+  let locating = false
+  let geoError = ""
+
+  const scopes: Array<{id: Scope; label: string; icon: string}> = [
+    {id: "all", label: "vocaux.scopeAll", icon: "fa-globe"},
+    {id: "umap", label: "vocaux.scopeUmap", icon: "fa-location-dot"},
+    {id: "sector", label: "vocaux.scopeSector", icon: "fa-draw-polygon"},
+    {id: "region", label: "vocaux.scopeRegion", icon: "fa-map"},
+  ]
+
+  $: myCell =
+    activeScope === "all" || !myUmap
+      ? null
+      : activeScope === "umap"
+        ? myUmap
+        : activeScope === "sector"
+          ? toSector(myUmap)
+          : toRegion(myUmap)
+
+  const selectScope = async (scope: Scope) => {
+    geoError = ""
+    if (scope !== "all" && !myUmap) {
+      locating = true
+      try {
+        myUmap = await getCurrentUmap()
+      } catch (err) {
+        geoError = $_("vocaux.locationFailed") || "Impossible d'obtenir la position"
+        locating = false
+        return
+      }
+      locating = false
+    }
+    activeScope = scope
+  }
+
+  $: activeGeoLevel = (activeScope === "all" ? "umap" : activeScope) as GeoLevel
+
+  $: filteredEvents =
+    activeScope === "all" || !myCell
+      ? events
+      : events.filter(e => {
+          const info = extractVocalInfo(e)
+          return matchesGeoCell(info.latitude, info.longitude, activeGeoLevel, myCell)
+        })
 
   const feed = {
     title: "Vocaux",
@@ -128,8 +189,37 @@
       </p>
     </div>
   {:else}
+    <!-- Geographic scope selector -->
+    <div class="flex flex-wrap items-center gap-2">
+      {#each scopes as s}
+        <button
+          class="flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all disabled:opacity-50"
+          class:border-accent={activeScope === s.id}
+          class:bg-accent={activeScope === s.id}
+          class:text-white={activeScope === s.id}
+          class:border-neutral-700={activeScope !== s.id}
+          class:bg-neutral-800={activeScope !== s.id}
+          class:text-neutral-400={activeScope !== s.id}
+          disabled={locating}
+          on:click={() => selectScope(s.id)}>
+          {#if locating && s.id !== "all" && activeScope !== s.id}
+            <i class="fa fa-spinner fa-spin" />
+          {:else}
+            <i class="fa {s.icon}" />
+          {/if}
+          {$_(s.label)}
+        </button>
+      {/each}
+      {#if myCell}
+        <span class="text-xs text-neutral-500">{geoCellLabel(activeGeoLevel, myCell)}</span>
+      {/if}
+    </div>
+    {#if geoError}
+      <p class="text-red-400 text-xs">{geoError}</p>
+    {/if}
+
     <div class="flex flex-col gap-3">
-      {#each events as event (event.id)}
+      {#each filteredEvents as event (event.id)}
         <div in:fly={{y: 20}}>
           <VocalCard {event} onReply={openReply} />
         </div>
@@ -140,11 +230,13 @@
       <Spinner />
     {:else if !exhausted && events.length > 0}
       <Spinner />
-    {:else if exhausted && events.length === 0}
+    {:else if exhausted && filteredEvents.length === 0}
       <div class="py-16 text-center">
         <i class="fa fa-microphone-slash mb-3 text-5xl text-neutral-700" />
         <p class="text-neutral-400">
-          {$_("vocaux.empty") || "Aucun message vocal pour l'instant."}
+          {activeScope === "all"
+            ? $_("vocaux.empty") || "Aucun message vocal pour l'instant."
+            : $_("vocaux.emptyScope") || "Aucun message vocal géolocalisé ici pour l'instant."}
         </p>
       </div>
     {/if}
