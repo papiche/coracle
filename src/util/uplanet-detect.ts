@@ -137,7 +137,26 @@ const getOwnProfileTagValue = (key: string): string | null => {
  */
 const getHomeStationServices = (): UPlanetServices | null => {
   const gw = getOwnProfileTagValue("ipfs_gw")
-  return gw ? servicesFromIpfsGateway(gw) : null
+  if (!gw) return null
+
+  const services = servicesFromIpfsGateway(gw)
+  if (!services) return null
+
+  // A private/loopback ipfs_gw (the profile owner's own station/LAN) is only
+  // reachable when THIS browsing context is also on that same network. Trusting
+  // it unconditionally sent every visitor whose own profile happens to carry a
+  // 127.0.0.1/192.168.* ipfs_gw down dead IPFS links on any other network — that
+  // address means something completely different on their machine than on the
+  // profile owner's.
+  if (
+    services.isLocal &&
+    typeof globalThis.location !== "undefined" &&
+    !isPrivateIP(globalThis.location.hostname)
+  ) {
+    return null
+  }
+
+  return services
 }
 
 export function detectUPlanetServices(): UPlanetServices | null {

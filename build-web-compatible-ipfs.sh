@@ -89,24 +89,43 @@ if [ ! -f dist/index.html ]; then
   exit 1
 fi
 
-# Remove service worker files (incompatible with IPFS gateways)
+# Remove service worker build artifacts (incompatible with IPFS gateways —
+# a SW would keep serving a stale gateway-specific CID after every future
+# publish) and strip the registration <script> so FRESH visitors never
+# install one in the first place.
 echo "--- Removing service worker (incompatible with IPFS gateways) ---"
-rm -f dist/sw.js dist/sw.js.map dist/workbox-*.js dist/workbox-*.js.map dist/registerSW.js
+rm -f dist/sw.js.map dist/workbox-*.js dist/workbox-*.js.map
 sed -i '/<script.*registerSW/d' dist/index.html 2>/dev/null || true
 
-# Self-healing cleanup for visitors who registered a service worker on this
-# origin from an EARLIER publish (before it was stripped, or before this
-# cleanup itself existed) — removing sw.js/registerSW.js server-side does
-# NOT unregister an already-installed worker; workbox's default "precache +
-# navigate fallback" strategy then serves that stale cached shell forever,
-# never hitting the network for new deploys (this is exactly what caused
-# coracle.copylaradio.com to keep showing a build missing the Blog/Vocaux
-# menu items long after they'd shipped). Runs once per origin (sessionStorage
-# guard), unregisters every SW registration, clears every Cache Storage
-# entry, then reloads so the now-uncontrolled page re-fetches fresh.
-sed -i \
-  -e 's#<head>#<head><script>(function(){if(!("serviceWorker" in navigator))return;var K="coracle_sw_cleanup_v1";navigator.serviceWorker.getRegistrations().then(function(regs){if(!regs.length)return;Promise.all(regs.map(function(r){return r.unregister()})).then(function(){if("caches" in window){caches.keys().then(function(keys){keys.forEach(function(k){caches.delete(k)})})}if(!sessionStorage.getItem(K)){sessionStorage.setItem(K,"1");location.reload()}})})})();</script>#' \
-  dist/index.html
+# Kill-switch for visitors who ALREADY have a service worker registered on
+# this origin (from before it was stripped): a browser only re-checks a
+# registered SW for updates by re-fetching the EXACT SAME url it registered
+# ("./sw.js") and diffing the bytes — merely deleting that file (404) does
+# NOT unregister the worker; the browser just keeps the last-installed one
+# running forever, silently serving its cached (and increasingly stale)
+# index.html/JS to every visit. That worker intercepts every fetch it
+# controls, including index.html itself, so shipping a fix INSIDE index.html
+# (tried previously) can never reach an already-affected visitor — the
+# fetch is served from the SW's own cache before it ever hits the network.
+# Publishing a byte-different /sw.js at the SAME url is the only thing that
+# gets picked up by that background check: this replaces the Workbox
+# service worker with a minimal one that unregisters itself, wipes every
+# Cache Storage entry, and reloads all open tabs — after which no SW
+# controls the origin anymore and every future publish is fetched fresh.
+cat > dist/sw.js <<'EOF'
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames.map((name) => caches.delete(name)));
+    await self.registration.unregister();
+    const clientsList = await self.clients.matchAll({type: 'window'});
+    for (const client of clientsList) {
+      client.navigate(client.url);
+    }
+  })());
+});
+EOF
 
 # Build the signed Android release APK and bundle it with www/ (landing +
 # comparison page) into dist/www/ — same CID as the rest of the app.

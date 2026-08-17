@@ -24,10 +24,7 @@
   import MenuDesktopSecondary from "src/app/MenuDesktopSecondary.svelte"
   import {slowConnections} from "src/app/state"
   import {router} from "src/app/util/router"
-  import {detectUPlanetServices} from "src/util/uplanet-detect"
   import {hasNewMessages, hasNewNotifications} from "src/engine"
-
-  const isUPlanet = !!detectUPlanetServices()
 
   const {page} = router
 
@@ -124,10 +121,8 @@
     </div>
   </MenuDesktopItem>
   <MenuDesktopItem path="/video" disabled={!$signer}>{$_("menu.video")}</MenuDesktopItem>
-  {#if isUPlanet}
-    <MenuDesktopItem path="/blog" disabled={!$signer}>{$_("menu.blog")}</MenuDesktopItem>
-    <MenuDesktopItem path="/vocaux" disabled={!$signer}>{$_("menu.vocaux")}</MenuDesktopItem>
-  {/if}
+  <MenuDesktopItem path="/blog" disabled={!$signer}>{$_("menu.blog")}</MenuDesktopItem>
+  <MenuDesktopItem path="/vocaux" disabled={!$signer}>{$_("menu.vocaux")}</MenuDesktopItem>
   <FlexColumn small class="absolute bottom-0 w-72">
     <Button
       class="staatliches px-8 text-start text-tinted-400 hover:text-tinted-100"

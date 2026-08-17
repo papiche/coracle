@@ -12,10 +12,7 @@
   import MenuMobileItem from "src/app/MenuMobileItem.svelte"
   import {slowConnections, menuIsOpen} from "src/app/state"
   import {router} from "src/app/util/router"
-  import {detectUPlanetServices} from "src/util/uplanet-detect"
   import {hasNewMessages, hasNewNotifications} from "src/engine"
-
-  const isUPlanet = !!detectUPlanetServices()
 
   const closeSubMenu = () => {
     subMenu = null
@@ -95,16 +92,14 @@
         <i class="fa fa-video" />
         {$_("menu.video")}
       </MenuMobileItem>
-      {#if isUPlanet}
-        <MenuMobileItem disabled={!$signer} href="/blog" on:click={closeMenu}>
-          <i class="fa fa-newspaper" />
-          {$_("menu.blog")}
-        </MenuMobileItem>
-        <MenuMobileItem disabled={!$signer} href="/vocaux" on:click={closeMenu}>
-          <i class="fa fa-microphone" />
-          {$_("menu.vocaux")}
-        </MenuMobileItem>
-      {/if}
+      <MenuMobileItem disabled={!$signer} href="/blog" on:click={closeMenu}>
+        <i class="fa fa-newspaper" />
+        {$_("menu.blog")}
+      </MenuMobileItem>
+      <MenuMobileItem disabled={!$signer} href="/vocaux" on:click={closeMenu}>
+        <i class="fa fa-microphone" />
+        {$_("menu.vocaux")}
+      </MenuMobileItem>
       <MenuMobileItem disabled={!$signer} href="/channels" on:click={closeMenu}>
         <i class="fa fa-message" />
         <div class="relative inline-block">
