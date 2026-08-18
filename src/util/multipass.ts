@@ -5,9 +5,14 @@ import logger from "src/util/logger"
 
 export interface ConstellationStation {
   uSPOT: string
-  hostname: string
+  // Derived from uSPOT's own URL — never the station's self-reported
+  // "hostname" field, which is its local/LAN machine name (e.g.
+  // "nexus.localhost") and unrelated to the public domain that serves it.
+  domain: string
   ipCity?: string
   captain?: string
+  myIPFS?: string
+  myRELAY?: string
 }
 
 export interface MultipassResult {
@@ -51,7 +56,7 @@ export async function fetchConstellationStations(
   baseApiUrl: string,
 ): Promise<ConstellationStation[]> {
   const base = baseApiUrl.replace(/\/$/, "")
-  const stations: ConstellationStation[] = [{uSPOT: base, hostname: new URL(base).hostname}]
+  const stations: ConstellationStation[] = [{uSPOT: base, domain: new URL(base).hostname}]
 
   try {
     const res = await fetch(`${base}/`, {signal: AbortSignal.timeout(5000)})
@@ -59,9 +64,25 @@ export async function fetchConstellationStations(
 
     const data = await res.json()
 
+    // The base station reports its own myIPFS/myRELAY/IPCity/captain at the
+    // root of the same payload — use them as-is, no derivation needed.
+    Object.assign(stations[0], {
+      ipCity: data.IPCity,
+      captain: data.captain,
+      myIPFS: data.myIPFS,
+      myRELAY: data.myRELAY,
+    })
+
     for (const s of data.SWARM || []) {
       if (s.uSPOT && !stations.some(st => st.uSPOT === s.uSPOT)) {
-        stations.push({uSPOT: s.uSPOT, hostname: s.hostname, ipCity: s.IPCity, captain: s.captain})
+        stations.push({
+          uSPOT: s.uSPOT,
+          domain: new URL(s.uSPOT).hostname,
+          ipCity: s.IPCity,
+          captain: s.captain,
+          myIPFS: s.myIPFS,
+          myRELAY: s.myRELAY,
+        })
       }
     }
   } catch (err) {

@@ -5,7 +5,12 @@
   import Modal from "src/partials/Modal.svelte"
   import Button from "src/partials/Button.svelte"
   import {nsecDecode} from "src/util/nostr"
-  import {resolveApiUrl} from "src/util/uplanet-detect"
+  import {
+    resolveApiUrl,
+    preferredApiUrl,
+    preferredRelayUrl,
+    preferredIpfsGateway,
+  } from "src/util/uplanet-detect"
   import {getCurrentUmap} from "src/util/geo"
   import {
     fetchConstellationStations,
@@ -90,6 +95,14 @@
 
     const secret = result.nsec.startsWith("nsec1") ? nsecDecode(result.nsec) : result.nsec
 
+    // Pin the new identity to the exact station it was created on — its own
+    // uSPOT/myRELAY/myIPFS, used as-is (never re-derived from a hostname).
+    if (selectedStation) {
+      preferredApiUrl.set(selectedStation.uSPOT)
+      if (selectedStation.myRELAY) preferredRelayUrl.set(selectedStation.myRELAY)
+      if (selectedStation.myIPFS) preferredIpfsGateway.set(selectedStation.myIPFS)
+    }
+
     loginWithNip01(secret)
     boot()
     onClose()
@@ -137,7 +150,7 @@
           class="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-accent">
           {#each stations as station}
             <option value={station}>
-              {station.hostname}{station.ipCity ? ` — ${station.ipCity}` : ""}
+              {station.domain}{station.ipCity ? ` — ${station.ipCity}` : ""}
             </option>
           {/each}
         </select>

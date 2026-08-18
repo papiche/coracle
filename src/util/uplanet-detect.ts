@@ -29,6 +29,29 @@ export const preferredRelayUrl = synced<string | null>({
   storage: localStorageProvider,
 })
 
+/**
+ * The IPFS gateway of the station a MULTIPASS was created on, taken verbatim
+ * from that station's own myIPFS field (src/util/multipass.ts) — never
+ * derived from a hostname convention, since myIPFS is already the literal,
+ * authoritative URL.
+ */
+export const preferredIpfsGateway = synced<string | null>({
+  key: "uplanet/preferredIpfsGateway",
+  defaultValue: null,
+  storage: localStorageProvider,
+})
+
+/**
+ * The API (uSPOT) URL of the station a MULTIPASS was created on, taken
+ * verbatim from that station's own uSPOT field (src/util/multipass.ts) —
+ * never re-derived from the relay's hostname.
+ */
+export const preferredApiUrl = synced<string | null>({
+  key: "uplanet/preferredApiUrl",
+  defaultValue: null,
+  storage: localStorageProvider,
+})
+
 let _cached: UPlanetServices | null | undefined
 let _verified: UPlanetServices | null = null
 
@@ -300,6 +323,9 @@ const resolveFallbackApiUrl = async (): Promise<string> => {
  * when an async context is available.
  */
 export function getApiUrlWithSource(): {url: string; source: ApiUrlSource} {
+  const directApiUrl = get(preferredApiUrl)
+  if (directApiUrl) return {url: directApiUrl, source: "preferred"}
+
   const preferred = get(preferredRelayUrl)
 
   if (preferred) {
@@ -322,6 +348,9 @@ export function getApiUrlWithSource(): {url: string; source: ApiUrlSource} {
  * Prefer this over getApiUrl() whenever an async context is available.
  */
 export async function resolveApiUrl(): Promise<string> {
+  const directApiUrl = get(preferredApiUrl)
+  if (directApiUrl) return directApiUrl
+
   const preferred = get(preferredRelayUrl)
 
   if (preferred) {
@@ -370,6 +399,9 @@ export const apiUrlToIpfsGateway = (apiUrl: string): string | null => {
  * known, so callers can fall back to their own default gateway string.
  */
 export function getPreferredIpfsGateway(): string | null {
+  const direct = get(preferredIpfsGateway)
+  if (direct) return direct
+
   const {url, source} = getApiUrlWithSource()
 
   return source === "default" ? null : apiUrlToIpfsGateway(url)
