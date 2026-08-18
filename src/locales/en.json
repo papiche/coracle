@@ -128,6 +128,29 @@
     "searchRelay": "Search relay",
     "invalidRelayUrl": "Please enter a valid relay url"
   },
+  "multipass": {
+    "title": "Create or restore your MULTIPASS",
+    "hint": "Choose your Astroport station, then enter your email. If an account already exists for that email, you'll be asked for its PASS code.",
+    "station": "Astroport station",
+    "email": "Email",
+    "pin": "PASS code",
+    "cancel": "Cancel",
+    "submit": "Continue",
+    "successTitle": "Your MULTIPASS is ready",
+    "saveWarning": "Save your PASS code and SSSS share somewhere safe now — they won't be shown again and are the only way to recover this account.",
+    "pass": "PASS code",
+    "ssss": "SSSS share",
+    "confirmSaved": "I've saved my PASS code and SSSS share",
+    "continue": "Log in",
+    "errors": {
+      "MULTIPASS_EXISTS": "This account already exists — enter its PASS code to restore it.",
+      "INVALID_PASS": "Incorrect PASS code.",
+      "PASS_UNAVAILABLE": "The PASS code is unavailable for this account.",
+      "IDENTITY_CONFLICT": "These details match a different existing account.",
+      "CREATION_IN_PROGRESS": "A creation is already in progress for this email, try again shortly.",
+      "UNKNOWN": "MULTIPASS request failed."
+    }
+  },
   "onboarding": {
     "step1": "1/4",
     "step2": "2/4",

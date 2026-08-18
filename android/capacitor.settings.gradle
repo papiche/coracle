@@ -11,5 +11,8 @@ project(':capacitor-app').projectDir = new File('../node_modules/.pnpm/@capacito
 include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../node_modules/.pnpm/@capacitor+filesystem@8.1.2_@capacitor+core@8.1.0/node_modules/@capacitor/filesystem/android')
 
+include ':capacitor-secure-storage-plugin'
+project(':capacitor-secure-storage-plugin').projectDir = new File('../node_modules/.pnpm/capacitor-secure-storage-plugin@0.13.0_@capacitor+core@8.1.0/node_modules/capacitor-secure-storage-plugin/android')
+
 include ':nostr-signer-capacitor-plugin'
 project(':nostr-signer-capacitor-plugin').projectDir = new File('../node_modules/.pnpm/nostr-signer-capacitor-plugin@https+++codeload.github.com+coracle-social+nostr-signer-capacit_6pvff576em5uwsog5x3w6ckkty/node_modules/nostr-signer-capacitor-plugin/android')

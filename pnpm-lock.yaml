@@ -95,6 +95,9 @@ importers:
       bowser:
         specifier: ^2.11.0
         version: 2.11.0
+      capacitor-secure-storage-plugin:
+        specifier: ^0.13.0
+        version: 0.13.0(@capacitor/core@8.1.0)
       classnames:
         specifier: ^2.5.1
         version: 2.5.1
@@ -2636,6 +2639,11 @@ packages:
 
   caniuse-lite@1.0.30001717:
     resolution: {integrity: sha512-auPpttCq6BDEG8ZAuHJIplGw6GODhjw+/11e7IjpnYCxZcW/ONgPs0KVBJ0d1bY3e2+7PRe5RCLyP+PfwVgkYw==}
+
+  capacitor-secure-storage-plugin@0.13.0:
+    resolution: {integrity: sha512-+rLC/9Z0LTaRRt6L6HjBwcDh5gqgI3NPmDSwo4hk41XQOy3EBrRo81VleIqFsowsMA3oMT+E59Bl8/HiWk0nhQ==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   caseless@0.12.0:
     resolution: {integrity: sha512-4tYFyifaFfGacoiObjJegolkwSU4xQNGbVgUiNYVUxbQ2x2lUsFvY4hVgVzGiIe6WLOPqycWXA40l+PWsxthUw==}
@@ -8581,6 +8589,10 @@ snapshots:
   caniuse-lite@1.0.30001715: {}
 
   caniuse-lite@1.0.30001717: {}
+
+  capacitor-secure-storage-plugin@0.13.0(@capacitor/core@8.1.0):
+    dependencies:
+      '@capacitor/core': 8.1.0
 
   caseless@0.12.0: {}
 

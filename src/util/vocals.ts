@@ -35,7 +35,7 @@ import {npubEncode} from "nostr-tools/nip19"
 import {sign} from "src/engine/state"
 import {signAndPublish, deleteEvent, getClientTags, myLoad} from "src/engine"
 import {getVerifiedUPlanet} from "src/util/uplanet-detect"
-import {resolveIpfsUrl} from "src/util/ipfs"
+import {resolveIpfsUrl, getIpfsGateway} from "src/util/ipfs"
 
 // Content values counted as a "like" by Astroport.ONE's own reaction tally
 // (NOSTR.UMAP.refresh.sh's count_likes()) — matches coracle's existing free-like
@@ -68,16 +68,63 @@ const findTag = (tags: string[][], keys: string[]) => {
   return ""
 }
 
+const IMETA_KEYS = [
+  "url",
+  "duration",
+  "title",
+  "description",
+  "waveform",
+  "dim",
+  "image",
+  "gifanim",
+  "m",
+  "x",
+  "info",
+  "sha256",
+]
+
+/**
+ * Parse a NIP-92 imeta tag ("imeta" + space-joined "key value key value…"
+ * fields) into a plain key/value map. publish_nostr_vocal.sh (Astroport.ONE's
+ * server-side publisher, used by the /vocals recorder at u.copylaradio.com)
+ * only ever puts `duration` inside imeta, never as a flat tag — so reading
+ * this is required to show a real duration for vocals recorded there.
+ */
+const parseImetaTag = (tag: string[]): Record<string, string> => {
+  const parts = tag.slice(1).join(" ").split(/\s+/)
+  const result: Record<string, string> = {}
+  let i = 0
+
+  while (i < parts.length) {
+    const key = parts[i]
+    if (!IMETA_KEYS.includes(key)) {
+      i++
+      continue
+    }
+    i++
+    const value: string[] = []
+    while (i < parts.length && !IMETA_KEYS.includes(parts[i])) {
+      value.push(parts[i])
+      i++
+    }
+    result[key] = value.join(" ")
+  }
+
+  return result
+}
+
 /** Extract display info from a kind 1222/1244 event's plaintext tags. */
 export const extractVocalInfo = (event: TrustedEvent): VocalInfo => {
   const {tags} = event
   const replyTag = tags.find(t => t[0] === "e")
+  const imeta = tags.filter(t => t[0] === "imeta").map(parseImetaTag)
+  const fromImeta = (key: string) => imeta.map(m => m[key]).find(Boolean) || ""
 
   return {
-    title: findTag(tags, ["title"]),
-    url: resolveIpfsUrl(findTag(tags, ["url"])),
-    duration: parseFloat(findTag(tags, ["duration"]) || "0"),
-    description: findTag(tags, ["description"]),
+    title: findTag(tags, ["title"]) || fromImeta("title"),
+    url: resolveIpfsUrl(findTag(tags, ["url"]) || fromImeta("url")),
+    duration: parseFloat(findTag(tags, ["duration"]) || fromImeta("duration") || "0"),
+    description: findTag(tags, ["description"]) || fromImeta("description"),
     latitude: findTag(tags, ["latitude"]),
     longitude: findTag(tags, ["longitude"]),
     isEncrypted: findTag(tags, ["encrypted"]) === "true",
@@ -114,6 +161,51 @@ export const decryptVocalContent = async (event: TrustedEvent): Promise<VocalPay
       : await $signer.nip44.decrypt(otherPubkey, event.content)
 
   return JSON.parse(plaintext)
+}
+
+/**
+ * Recover a broken /ipfs/<uDriveRoot>/<filename> vocal URL (see
+ * uploadVocalAudio's comment: some events, including ones published by
+ * Astroport.ONE's own publish_nostr_vocal.sh, ended up tagged with a uDRIVE
+ * ROOT cid + filename that the gateway can't resolve directly) by reading
+ * that root's manifest.json — run_uDRIVE_generation_script always publishes
+ * one alongside the regenerated drive, mapping each filename to its own
+ * directly-resolvable CID and real duration. Called lazily, only once a
+ * playback attempt at the tagged URL has actually failed.
+ */
+export const resolveBrokenVocalUrl = async (
+  brokenUrl: string,
+): Promise<{url: string; duration?: number} | null> => {
+  try {
+    const match = brokenUrl.match(/\/ipfs\/([^/]+)\/(.+)$/)
+    if (!match) return null
+
+    const [, rootCid, encodedPath] = match
+    const filename = decodeURIComponent(encodedPath.split("/").pop() || "")
+    if (!filename) return null
+
+    const gw = getIpfsGateway()
+    const res = await fetch(`${gw}/ipfs/${rootCid}/manifest.json`, {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return null
+
+    const manifest = await res.json()
+    const entry = (manifest.files || []).find((f: any) => f.name === filename)
+    if (!entry?.ipfs_link) return null
+
+    const duration =
+      typeof entry.duration_seconds === "number"
+        ? entry.duration_seconds
+        : parseFloat(entry.duration_seconds)
+
+    return {
+      url: `${gw}/ipfs/${entry.ipfs_link}`,
+      duration: Number.isFinite(duration) ? duration : undefined,
+    }
+  } catch {
+    return null
+  }
 }
 
 const BEST_AUDIO_MIME_TYPES = [
@@ -201,12 +293,19 @@ export const uploadVocalAudio = async (file: File | Blob): Promise<UploadedVocal
   }
 
   const data = await res.json()
-  if (!data.new_cid) {
+
+  // file_cid is the CID of the audio file itself; new_cid is sometimes
+  // instead the CID of the whole regenerated uDRIVE root directory (see
+  // Astroport.ONE/tools/publish_nostr_vocal.sh's own comment on this exact
+  // pitfall, already fixed once before for youtube.com.sh) — using it here
+  // produces a URL that 404s ("no link named … under <uDRIVE root>").
+  const cid = data.file_cid || data.new_cid
+  if (!cid) {
     throw new Error("Réponse d'upload invalide (CID manquant)")
   }
 
   return {
-    cid: data.new_cid,
+    cid,
     fileHash: data.fileHash || "",
     mimeType: data.mimeType || "audio/webm",
     duration: data.duration || 0,
@@ -242,7 +341,10 @@ export const publishVocalMessage = async ({
   recipientPubkey,
   replyTo,
 }: PublishVocalOptions) => {
-  const url = `/ipfs/${uploaded.cid}/vocal.${uploaded.mimeType.split("/")[1] || "webm"}`
+  // uploaded.cid is a raw file CID (no directory wrapper) — appending a
+  // filename segment (as if it were a folder entry) 404s: "no link named
+  // …under <cid>". The gateway serves the file directly at /ipfs/<cid>.
+  const url = `/ipfs/${uploaded.cid}`
   const hasGeo = Boolean(latitude && longitude)
 
   const payload: VocalPayload = {

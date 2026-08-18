@@ -134,6 +134,7 @@ import {
 } from "src/engine/storage"
 import {SearchHelper, fromCsv, parseJson, ensureProto} from "src/util/misc"
 import {appDataKeys} from "src/util/nostr"
+import {secureSessionStorage} from "src/util/secureSessionStorage"
 import {readable, derived, writable} from "svelte/store"
 
 import {detectUPlanetServices, initUPlanetServices} from "src/util/uplanet-detect"
@@ -946,11 +947,13 @@ if (!initialized) {
     storage: localStorageProvider,
   })
 
-  // Sync user sessions
+  // Sync user sessions — nip01 sessions carry a raw nsec, so their `secret`
+  // is split out into OS-keystore-backed secure storage instead of landing
+  // in plaintext localStorage like the rest of the session data.
   sync({
     key: "sessions",
     store: sessions,
-    storage: localStorageProvider,
+    storage: secureSessionStorage,
   })
 
   // Sync decrypt setting

@@ -51,6 +51,7 @@
     "@welshman/util": "^0.8.7",
     "autoprefixer": "^10.4.21",
     "bowser": "^2.11.0",
+    "capacitor-secure-storage-plugin": "^0.13.0",
     "classnames": "^2.5.1",
     "compressorjs": "^1.2.1",
     "cypress": "^13.17.0",

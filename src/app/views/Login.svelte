@@ -9,7 +9,7 @@
   import Button from "src/partials/Button.svelte"
   import FlexColumn from "src/partials/FlexColumn.svelte"
   import Heading from "src/partials/Heading.svelte"
-  import {getIpfsGateway} from "src/util/ipfs"
+  import MultipassLogin from "src/app/shared/MultipassLogin.svelte"
   import {boot} from "src/app/state"
 
   // Define the interface for AppInfo
@@ -33,10 +33,8 @@
     boot()
   }
 
-  // Keygen link: served via the UPlanet IPFS gateway
-  const keygenUrl = `${getIpfsGateway()}/ipns/copylaradio.com/g1.html`
-
   let signerApps: AppInfo[] = []
+  let showMultipassLogin = false
 
   onMount(async () => {
     if (Capacitor.isNativePlatform()) {
@@ -69,10 +67,10 @@
         <div class="rounded border border-tinted-600 p-4 text-center text-sm text-tinted-400">
           <i class="fa fa-puzzle-piece mb-2 text-2xl text-accent" />
           <p class="mb-2">{$_("login.noExtension")}</p>
-          <Link external class="btn btn-accent btn-sm" href={keygenUrl}>
+          <Button class="btn btn-accent btn-sm" on:click={() => (showMultipassLogin = true)}>
             <i class="fa fa-key" />
             {$_("login.createAccount")}
-          </Link>
+          </Button>
         </div>
       {/if}
       <!-- NIP-55 signers (Android mobile apps) -->
@@ -83,10 +81,16 @@
         </Button>
       {/each}
     </div>
-    <!-- Signup → UPlanet keygen -->
+    <!-- Signup / restore → MULTIPASS (UPassport /g1nostr) -->
     <span class="text-center text-sm">
       {$_("login.needAccount")}
-      <Link external class="underline" href={keygenUrl}>{$_("login.registerInstead")}</Link>
+      <button class="underline" on:click={() => (showMultipassLogin = true)}>
+        {$_("login.registerInstead")}
+      </button>
     </span>
   </FlexColumn>
 </div>
+
+{#if showMultipassLogin}
+  <MultipassLogin onClose={() => (showMultipassLogin = false)} />
+{/if}

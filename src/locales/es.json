@@ -128,6 +128,29 @@
     "searchRelay": "Buscar relé",
     "invalidRelayUrl": "Por favor, introduce una URL de relé válida"
   },
+  "multipass": {
+    "title": "Crea o restaura tu MULTIPASS",
+    "hint": "Elige tu estación Astroport y luego introduce tu email. Si ya existe una cuenta para ese email, se te pedirá su código PASS.",
+    "station": "Estación Astroport",
+    "email": "Email",
+    "pin": "Código PASS",
+    "cancel": "Cancelar",
+    "submit": "Continuar",
+    "successTitle": "Tu MULTIPASS está listo",
+    "saveWarning": "Guarda ya tu código PASS y tu parte SSSS en un lugar seguro — no se volverán a mostrar y son la única forma de recuperar esta cuenta.",
+    "pass": "Código PASS",
+    "ssss": "Parte SSSS",
+    "confirmSaved": "He guardado mi código PASS y mi parte SSSS",
+    "continue": "Iniciar sesión",
+    "errors": {
+      "MULTIPASS_EXISTS": "Esta cuenta ya existe — introduce su código PASS para restaurarla.",
+      "INVALID_PASS": "Código PASS incorrecto.",
+      "PASS_UNAVAILABLE": "El código PASS no está disponible para esta cuenta.",
+      "IDENTITY_CONFLICT": "Estos datos coinciden con otra cuenta existente.",
+      "CREATION_IN_PROGRESS": "Ya hay una creación en curso para este email, inténtalo de nuevo en unos instantes.",
+      "UNKNOWN": "Fallo en la solicitud MULTIPASS."
+    }
+  },
   "onboarding": {
     "step1": "1/4",
     "step2": "2/4",
