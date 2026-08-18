@@ -32,6 +32,7 @@ import {
   getAddress,
   getTagValue,
   getListTags,
+  isReplaceableKind,
   isSignedEvent,
   makeList,
   uploadBlob,
@@ -167,8 +168,18 @@ export const publishDeletion = ({kind, address = null, id = null}) => {
   })
 }
 
+// getAddress() returns a kind:pubkey:d address even for non-addressable kinds
+// (using "" for the missing "d" tag) — every regular-kind event (1, 21, 22...)
+// from the same author then shares that exact address. The repository tracks
+// deletes by address and hides any event older than the delete's created_at,
+// so including that tag here would locally hide every past note of that kind
+// from this author, not just the one being deleted (see isReplaceableKind).
 export const deleteEvent = (event: TrustedEvent) =>
-  publishDeletion({id: event.id, address: getAddress(event), kind: event.kind})
+  publishDeletion({
+    id: event.id,
+    address: isReplaceableKind(event.kind) ? getAddress(event) : null,
+    kind: event.kind,
+  })
 
 export const deleteEventByAddress = (address: string) =>
   publishDeletion({address, kind: Address.from(address).kind})

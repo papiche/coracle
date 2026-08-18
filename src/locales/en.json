@@ -641,20 +641,8 @@
     "season": "Season",
     "episode": "episode",
     "episodes": "episodes",
-    "genreOther": "Other"
-  },
-  "videoEdit": {
-    "title": "Edit video",
-    "hint": "Existing likes and comments will stay attached to the original publication.",
-    "titleRequired": "Title is required",
-    "seriesName": "Series name",
-    "episodeName": "Episode name",
-    "season": "Season",
-    "episode": "Episode",
-    "cancel": "Cancel",
-    "save": "Save",
-    "saved": "Video updated!",
-    "saveFailed": "Failed to update"
+    "genreOther": "Other",
+    "deleteBlockedByEngagement": "Can't delete: someone has already replied, reacted, or zapped this video"
   },
   "vocaux": {
     "title": "Vocaux — Voice Messages",

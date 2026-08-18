@@ -641,20 +641,8 @@
     "season": "Saison",
     "episode": "episode",
     "episodes": "episodes",
-    "genreOther": "Autre"
-  },
-  "videoEdit": {
-    "title": "Modifier la video",
-    "hint": "Les likes et commentaires existants resteront attaches a la publication d'origine.",
-    "titleRequired": "Le titre est requis",
-    "seriesName": "Nom de la serie",
-    "episodeName": "Nom de l'episode",
-    "season": "Saison",
-    "episode": "Episode",
-    "cancel": "Annuler",
-    "save": "Enregistrer",
-    "saved": "Video mise a jour !",
-    "saveFailed": "Echec de la mise a jour"
+    "genreOther": "Autre",
+    "deleteBlockedByEngagement": "Suppression impossible : quelqu'un a déjà répondu, réagi ou zappé cette vidéo"
   },
   "vocaux": {
     "title": "Vocaux — Messages vocaux",

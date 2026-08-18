@@ -1,13 +1,14 @@
 <script lang="ts">
+  import {_} from "svelte-i18n"
   import type {TrustedEvent} from "@welshman/util"
   import {getReplyFilters, NOTE, COMMENT, REACTION, ZAP_RESPONSE} from "@welshman/util"
   import type {Thunk} from "@welshman/app"
   import {Router, addMaximalFallbacks} from "@welshman/router"
-  import {pubkey} from "@welshman/app"
+  import {pubkey, repository} from "@welshman/app"
+  import {deriveEvents} from "@welshman/store"
   import NoteHeader from "src/app/shared/NoteHeader.svelte"
   import NoteActions from "src/app/shared/NoteActions.svelte"
   import NoteReply from "src/app/shared/NoteReply.svelte"
-  import VideoEditForm from "src/app/shared/VideoEditForm.svelte"
   import {extractVideoInfo, cleanVideoTitle} from "src/util/video"
   import {getSetting, env, myLoad} from "src/engine"
   import {router} from "src/app/util"
@@ -19,13 +20,26 @@
 
   let currentIndex = index
   let replyIsOpen = false
-  let showEditForm = false
 
   $: event = events[currentIndex]
   $: info = event ? extractVideoInfo(event) : null
   $: title = info ? cleanVideoTitle(info) : ""
   $: hasPrev = currentIndex > 0
   $: hasNext = currentIndex < events.length - 1
+
+  // Deletion is only safe while nothing else references this event: kind
+  // 21/22 are non-addressable, so "deleting" means publish a kind-5 request
+  // and hope every client honors it — any reply/reaction/zap already grafted
+  // on by someone else would be left pointing at a hidden/gone parent.
+  $: engagement = event
+    ? deriveEvents({
+        repository,
+        filters: getReplyFilters([event], {kinds: [NOTE, COMMENT, REACTION, ZAP_RESPONSE]}),
+      })
+    : null
+  $: hasExternalEngagement = Boolean(
+    event && engagement && $engagement.some(e => e.pubkey !== event.pubkey),
+  )
 
   const onClose = () => router.pop()
 
@@ -55,21 +69,9 @@
     replyIsOpen = false
   }
 
-  const openEditForm = () => {
-    showEditForm = true
-  }
-
-  const closeEditForm = () => {
-    showEditForm = false
-  }
-
   // Same confirmation flow as Message.svelte's delete button (NoteDelete.svelte)
   const removeVideo = () => {
     router.at("notes").of(event.id).at("delete").qp({kind: event.kind}).open()
-  }
-
-  const onEditSaved = (newEvent: TrustedEvent) => {
-    events = [...events.slice(0, currentIndex), newEvent, ...events.slice(currentIndex + 1)]
   }
 
   const onKeydown = (e: KeyboardEvent) => {
@@ -116,10 +118,12 @@
     {/if}
     <div class="flex items-center gap-4">
       {#if event && event.pubkey === $pubkey}
-        <button class="text-xl text-white" on:click={openEditForm}>
-          <i class="fa fa-pen" />
-        </button>
-        <button class="text-xl text-white" on:click={removeVideo}>
+        <button
+          class="text-xl text-white"
+          class:opacity-40={hasExternalEngagement}
+          disabled={hasExternalEngagement}
+          title={hasExternalEngagement ? $_("video.deleteBlockedByEngagement") : ""}
+          on:click={removeVideo}>
           <i class="fa fa-trash" />
         </button>
       {/if}
@@ -182,7 +186,3 @@
     </div>
   {/if}
 </div>
-
-{#if showEditForm && event}
-  <VideoEditForm {event} onClose={closeEditForm} onSaved={onEditSaved} />
-{/if}
