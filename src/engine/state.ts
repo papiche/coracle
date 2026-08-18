@@ -102,6 +102,7 @@ import {
   getTag,
   getIdAndAddress,
   getIdFilters,
+  isReplaceableKind,
 } from "@welshman/util"
 import Fuse from "fuse.js"
 import {getPow} from "nostr-tools/nip13"
@@ -933,6 +934,19 @@ if (!initialized) {
   // ("Vos relais") over hostname auto-detection. Relay stays regardless —
   // WebSocket doesn't need CORS.
   initUPlanetServices()
+
+  // Work around already-published kind-5 deletions that carry a bogus "a"
+  // tag for a non-addressable kind (fixed at the source in deleteEvent(),
+  // src/engine/commands.ts, but that doesn't undo deletes already on relays).
+  // getAddress() returns the same "kind:pubkey:" string for every event of
+  // that kind/author with no "d" tag, so the repository's isDeletedByAddress
+  // ends up treating ANY one such delete as "delete every past note of this
+  // kind by this author" — e.g. a single video edit's cleanup hid an entire
+  // video library. Only trust address-based deletion for kinds that are
+  // actually addressable (NIP-33 replaceable).
+  const isDeletedByAddress = repository.isDeletedByAddress.bind(repository)
+  repository.isDeletedByAddress = event =>
+    isReplaceableKind(event.kind) && isDeletedByAddress(event)
 
   // Configure router
   routerContext.getDefaultRelays = always(env.DEFAULT_RELAYS)
