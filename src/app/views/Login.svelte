@@ -36,8 +36,15 @@
   let signerApps: AppInfo[] = []
   let showMultipassLogin = false
 
+  // NIP-55 signer apps (Amber…) only exist on Android — on web, nos2x/Alby is
+  // the equivalent, and it's the only thing that keeps a MULTIPASS login
+  // durable there (see login.webPersistenceWarning below): the OS Keystore
+  // backing secureSessionStorage.ts on native has no real web equivalent,
+  // it falls back to a merely-obfuscated localStorage entry.
+  const isNative = Capacitor.isNativePlatform()
+
   onMount(async () => {
-    if (Capacitor.isNativePlatform()) {
+    if (isNative) {
       signerApps = await getNip55()
     }
   })
@@ -63,14 +70,21 @@
           {$_("login.useExtension")}
         </Button>
       {:else}
-        <!-- Aucune extension détectée: guider l'utilisateur -->
+        <!-- Aucune extension détectée: guider l'utilisateur (message différent
+             sur Android, où "nos2x/Alby" n'a pas de sens — les apps signataires
+             s'affichent séparément ci-dessous via signerApps) -->
         <div class="rounded border border-tinted-600 p-4 text-center text-sm text-tinted-400">
           <i class="fa fa-puzzle-piece mb-2 text-2xl text-accent" />
-          <p class="mb-2">{$_("login.noExtension")}</p>
+          <p class="mb-2">{$_(isNative ? "login.noSignerNative" : "login.noExtension")}</p>
           <Button class="btn btn-accent btn-sm" on:click={() => (showMultipassLogin = true)}>
             <i class="fa fa-key" />
             {$_("login.createAccount")}
           </Button>
+          {#if !isNative}
+            <p class="mt-3 text-xs text-tinted-500">
+              <i class="fa fa-triangle-exclamation mr-1" />{$_("login.webPersistenceWarning")}
+            </p>
+          {/if}
         </div>
       {/if}
       <!-- NIP-55 signers (Android mobile apps) -->

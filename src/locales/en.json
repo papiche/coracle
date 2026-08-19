@@ -102,6 +102,8 @@
     "browseSignerApps": "Browse Signer Apps",
     "needAccount": "Need an account?",
     "noExtension": "No NOSTR extension detected. Install nos2x or Alby to sign in, or create a new UPlanet account:",
+    "noSignerNative": "No NOSTR signer detected. Install a signer app (e.g. Amber) or create a UPlanet account — your credentials stay securely stored on this device.",
+    "webPersistenceWarning": "In a web browser, this MULTIPASS login can be lost (cleared cache, private browsing, switching devices) — unlike the Android app, your credentials aren't stored in a system keystore here. For a durable login, prefer a NOSTR extension (nos2x, Alby) — or keep your PASS code safe, it lets you restore your account.",
     "createAccount": "Create UPlanet account",
     "registerInstead": "Register instead",
     "use": "Use {name}",

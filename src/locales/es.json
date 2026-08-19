@@ -102,6 +102,8 @@
     "browseSignerApps": "Explorar apps de firma",
     "needAccount": "¿Necesitas una cuenta?",
     "noExtension": "No se detectó ninguna extensión NOSTR. Instala nos2x o Alby para iniciar sesión, o crea una cuenta UPlanet:",
+    "noSignerNative": "No se detectó ningún firmante NOSTR. Instala una app de firma (p. ej. Amber) o crea una cuenta UPlanet — tus credenciales permanecen guardadas de forma segura en este dispositivo.",
+    "webPersistenceWarning": "En un navegador web, esta sesión MULTIPASS puede perderse (caché borrada, navegación privada, cambio de dispositivo) — a diferencia de la app de Android, tus credenciales no se guardan aquí en un almacén seguro del sistema. Para una sesión duradera, prefiere una extensión NOSTR (nos2x, Alby) — o guarda bien tu código PASS, te permite restaurar tu cuenta.",
     "createAccount": "Crear cuenta UPlanet",
     "registerInstead": "Registrarse",
     "use": "Usar {name}",
