@@ -14,6 +14,16 @@ export interface ConstellationStation {
   captain?: string
   myIPFS?: string
   myRELAY?: string
+  ipfsnodeid?: string
+  // Station's own GPS coordinates (Astroport.ONE's STATION_LAT/STATION_LON),
+  // as reported — "0"/"0" means the station has none configured.
+  lat?: string
+  lon?: string
+  // Weekly PAF ("Participation Aux Frais"), in Ẑen.
+  paf?: string
+  // Available disk space in GB. Present at the root for the base station;
+  // absent for swarm peers until enriched via enrichStationsWithDiskSpace().
+  availableSpaceGb?: number
 }
 
 export interface MultipassResult {
@@ -88,6 +98,11 @@ export async function fetchConstellationStations(
         captain: data.captain,
         myIPFS: data.myIPFS,
         myRELAY: data.myRELAY,
+        ipfsnodeid: data.IPFSNODEID || data.ipfsnodeid,
+        lat: data.STATION_LAT,
+        lon: data.STATION_LON,
+        paf: data.PAF,
+        availableSpaceGb: data.capacities?.available_space_gb,
       })
 
       for (const s of data.SWARM || []) {
@@ -99,6 +114,14 @@ export async function fetchConstellationStations(
             captain: s.captain,
             myIPFS: s.myIPFS,
             myRELAY: s.myRELAY,
+            ipfsnodeid: s.ipfsnodeid,
+            lat: s.STATION_LAT,
+            lon: s.STATION_LON,
+            paf: s.PAF,
+            // s.capacities is a restricted projection (Astroport.ONE's
+            // Ustats.sh SWARM[] filter) that drops available_space_gb —
+            // enrichStationsWithDiskSpace() fills this in separately, per
+            // peer, straight from its own published 12345.json.
           })
         }
       }
@@ -113,6 +136,37 @@ export async function fetchConstellationStations(
 
   const stations = all.filter(s => !isLoopbackHost(s.domain))
   return {stations, hiddenLoopbackCount: all.length - stations.length}
+}
+
+/**
+ * Best-effort enrichment: fill in availableSpaceGb for stations missing it
+ * (i.e. swarm peers, whose entry in the base station's SWARM[] doesn't carry
+ * it) by fetching each one's own unfiltered /ipns/<ipfsnodeid>/12345.json —
+ * the full state Astroport.ONE publishes for that station, straight from its
+ * own myIPFS gateway. Mutates the given stations in place; returns once every
+ * fetch has settled (success or failure) so callers can re-render.
+ */
+export async function enrichStationsWithDiskSpace(stations: ConstellationStation[]): Promise<void> {
+  await Promise.all(
+    stations
+      .filter(s => s.availableSpaceGb === undefined && s.myIPFS && s.ipfsnodeid)
+      .map(async s => {
+        try {
+          const res = await fetch(
+            `${s.myIPFS!.replace(/\/$/, "")}/ipns/${s.ipfsnodeid}/12345.json`,
+            {signal: AbortSignal.timeout(5000)},
+          )
+          if (!res.ok) return
+
+          const json = await res.json()
+          const gb = json?.capacities?.available_space_gb
+
+          if (typeof gb === "number") s.availableSpaceGb = gb
+        } catch (err) {
+          logger.info(`[multipass] Could not fetch disk space for ${s.domain}:`, err)
+        }
+      }),
+  )
 }
 
 const LANG_2LETTER = /^[a-z]{2}$/

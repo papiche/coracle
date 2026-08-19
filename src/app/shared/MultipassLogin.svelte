@@ -11,9 +11,10 @@
     preferredRelayUrl,
     preferredIpfsGateway,
   } from "src/util/uplanet-detect"
-  import {getCurrentUmap} from "src/util/geo"
+  import {getCurrentUmap, haversineDistanceKm} from "src/util/geo"
   import {
     fetchConstellationStations,
+    enrichStationsWithDiskSpace,
     createOrRestoreMultipass,
     MultipassError,
     type ConstellationStation,
@@ -33,6 +34,7 @@
   let email = ""
   let passCode = ""
   let loading = true
+  let locating = false
   let errorMessage = ""
   let result: MultipassResult | null = null
   let savedConfirmed = false
@@ -45,7 +47,64 @@
     } finally {
       loading = false
     }
+
+    // Disk space for swarm peers isn't in the initial payload — fetch it
+    // per-station in the background and re-render once settled.
+    enrichStationsWithDiskSpace(stations).then(() => {
+      stations = [...stations]
+    })
   })
+
+  const stationLabel = (station: ConstellationStation): string => {
+    const parts = [station.domain + (station.ipCity ? ` — ${station.ipCity}` : "")]
+
+    if (station.availableSpaceGb !== undefined) {
+      parts.push($_("multipass.diskFree", {values: {gb: Math.round(station.availableSpaceGb)}}))
+    }
+
+    if (station.paf) {
+      parts.push($_("multipass.pafWeekly", {values: {paf: station.paf}}))
+    }
+
+    return parts.join(" · ")
+  }
+
+  const pickClosestStation = async () => {
+    locating = true
+    errorMessage = ""
+
+    try {
+      const umap = await getCurrentUmap()
+      const here = {lat: parseFloat(umap.lat), lon: parseFloat(umap.lon)}
+
+      let closest: ConstellationStation | null = null
+      let closestDistance = Infinity
+
+      for (const station of stations) {
+        if (!station.lat || !station.lon) continue
+
+        const lat = parseFloat(station.lat)
+        const lon = parseFloat(station.lon)
+        if (lat === 0 && lon === 0) continue // no GPS configured on that station
+
+        const distance = haversineDistanceKm(here, {lat, lon})
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closest = station
+        }
+      }
+
+      if (closest) {
+        selectedStation = closest
+      } else {
+        errorMessage = $_("multipass.noStationLocation")
+      }
+    } catch {
+      errorMessage = $_("multipass.geoUnavailable")
+    } finally {
+      locating = false
+    }
+  }
 
   const errorMessageFor = (code: MultipassError["code"]) => {
     const key = `multipass.errors.${code}`
@@ -144,14 +203,28 @@
       <p class="text-xs text-neutral-500">{$_("multipass.hint")}</p>
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-neutral-400">{$_("multipass.station")}</label>
+        <div class="flex items-center justify-between gap-2">
+          <label class="text-xs font-medium text-neutral-400">{$_("multipass.station")}</label>
+          <button
+            type="button"
+            class="flex items-center gap-1 text-xs text-accent hover:underline disabled:opacity-50"
+            disabled={loading || locating || stations.length === 0}
+            on:click={pickClosestStation}>
+            {#if locating}
+              <i class="fa fa-spinner fa-spin" />
+            {:else}
+              <i class="fa fa-location-crosshairs" />
+            {/if}
+            {$_("multipass.findClosest")}
+          </button>
+        </div>
         <select
           bind:value={selectedStation}
           disabled={loading || stations.length === 0}
           class="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-accent">
           {#each stations as station}
             <option value={station}>
-              {station.domain}{station.ipCity ? ` — ${station.ipCity}` : ""}
+              {stationLabel(station)}
             </option>
           {/each}
         </select>
