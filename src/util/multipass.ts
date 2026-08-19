@@ -2,6 +2,7 @@
 // external g1.html/keygen redirect with an in-app flow (email + PIN, mirroring
 // zelkova's multipass_service.dart create/restore logic).
 import logger from "src/util/logger"
+import {detectUPlanetServices} from "src/util/uplanet-detect"
 
 export interface ConstellationStation {
   uSPOT: string
@@ -47,49 +48,71 @@ export class MultipassError extends Error {
   }
 }
 
+export interface ConstellationStationsResult {
+  stations: ConstellationStation[]
+  // Swarm peers reported as loopback (127.0.0.1/localhost) and hidden from
+  // `stations` because they're only reachable from their own machine — not
+  // from wherever this browser happens to be.
+  hiddenLoopbackCount: number
+}
+
+const isLoopbackHost = (host: string) =>
+  host === "127.0.0.1" || host === "localhost" || host === "::1"
+
 /**
  * Station list for the "choose your Astroport" picker: the base station
  * itself plus its known constellation peers (Ustats.sh's SWARM[], surfaced by
  * a plain GET / on the uSPOT API — the same data g1.html uses to draw its map).
+ *
+ * A peer whose uSPOT is a loopback address (127.0.0.1/localhost) can't be
+ * reached from a browser anywhere but that station's own machine, so it's
+ * filtered out — unless coracle itself is currently being served from a
+ * local Astroport gateway, in which case "127.0.0.1" genuinely means this
+ * machine and stays visible.
  */
 export async function fetchConstellationStations(
   baseApiUrl: string,
-): Promise<ConstellationStation[]> {
+): Promise<ConstellationStationsResult> {
   const base = baseApiUrl.replace(/\/$/, "")
-  const stations: ConstellationStation[] = [{uSPOT: base, domain: new URL(base).hostname}]
+  const all: ConstellationStation[] = [{uSPOT: base, domain: new URL(base).hostname}]
 
   try {
     const res = await fetch(`${base}/`, {signal: AbortSignal.timeout(5000)})
-    if (!res.ok) return stations
+    if (res.ok) {
+      const data = await res.json()
 
-    const data = await res.json()
+      // The base station reports its own myIPFS/myRELAY/IPCity/captain at the
+      // root of the same payload — use them as-is, no derivation needed.
+      Object.assign(all[0], {
+        ipCity: data.IPCity,
+        captain: data.captain,
+        myIPFS: data.myIPFS,
+        myRELAY: data.myRELAY,
+      })
 
-    // The base station reports its own myIPFS/myRELAY/IPCity/captain at the
-    // root of the same payload — use them as-is, no derivation needed.
-    Object.assign(stations[0], {
-      ipCity: data.IPCity,
-      captain: data.captain,
-      myIPFS: data.myIPFS,
-      myRELAY: data.myRELAY,
-    })
-
-    for (const s of data.SWARM || []) {
-      if (s.uSPOT && !stations.some(st => st.uSPOT === s.uSPOT)) {
-        stations.push({
-          uSPOT: s.uSPOT,
-          domain: new URL(s.uSPOT).hostname,
-          ipCity: s.IPCity,
-          captain: s.captain,
-          myIPFS: s.myIPFS,
-          myRELAY: s.myRELAY,
-        })
+      for (const s of data.SWARM || []) {
+        if (s.uSPOT && !all.some(st => st.uSPOT === s.uSPOT)) {
+          all.push({
+            uSPOT: s.uSPOT,
+            domain: new URL(s.uSPOT).hostname,
+            ipCity: s.IPCity,
+            captain: s.captain,
+            myIPFS: s.myIPFS,
+            myRELAY: s.myRELAY,
+          })
+        }
       }
     }
   } catch (err) {
     logger.info("[multipass] Could not list constellation stations:", err)
   }
 
-  return stations
+  if (detectUPlanetServices()?.isLocal) {
+    return {stations: all, hiddenLoopbackCount: 0}
+  }
+
+  const stations = all.filter(s => !isLoopbackHost(s.domain))
+  return {stations, hiddenLoopbackCount: all.length - stations.length}
 }
 
 const LANG_2LETTER = /^[a-z]{2}$/

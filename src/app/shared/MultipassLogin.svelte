@@ -28,6 +28,7 @@
 
   let step: Step = "form"
   let stations: ConstellationStation[] = []
+  let hiddenLoopbackCount = 0
   let selectedStation: ConstellationStation | null = null
   let email = ""
   let passCode = ""
@@ -39,7 +40,7 @@
   onMount(async () => {
     try {
       const baseUrl = await resolveApiUrl()
-      stations = await fetchConstellationStations(baseUrl)
+      ;({stations, hiddenLoopbackCount} = await fetchConstellationStations(baseUrl))
       selectedStation = stations[0] || null
     } finally {
       loading = false
@@ -154,6 +155,11 @@
             </option>
           {/each}
         </select>
+        {#if hiddenLoopbackCount > 0}
+          <p class="text-xs text-neutral-500">
+            {$_("multipass.hiddenLocalStations", {values: {count: hiddenLoopbackCount}})}
+          </p>
+        {/if}
       </div>
 
       <div class="flex flex-col gap-1">

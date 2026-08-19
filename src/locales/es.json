@@ -132,6 +132,7 @@
     "title": "Crea o restaura tu MULTIPASS",
     "hint": "Elige tu estación Astroport y luego introduce tu email. Si ya existe una cuenta para ese email, se te pedirá su código PASS.",
     "station": "Estación Astroport",
+    "hiddenLocalStations": "{count} estación(es) local(es) oculta(s) (no accesible(s) desde esta red)",
     "email": "Email",
     "pin": "Código PASS",
     "cancel": "Cancelar",
