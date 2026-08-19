@@ -1,8 +1,26 @@
 # What is this?
 
-Coracle is a web client for the Nostr protocol focused on pushing the boundaries of what's unique about nostr, including relay selection and management, web-of-trust based moderation and content recommendations, and privacy protection. Check it out at [coracle.social](https://coracle.social).
+Coracle is a web client for the Nostr protocol focused on pushing the boundaries of what's unique about nostr, including relay selection and management, web-of-trust based moderation and content recommendations, and privacy protection.
 
-If you like Coracle and want to support its development, you can donate sats via [Geyser](https://geyser.fund/project/coracle).
+This `zen` branch is a fork that turns Coracle into the **UPlanet MULTIPASS client**: a Nostr identity backed by a Ğ1 wallet, created and managed in-app against a self-hosted **Astroport** station rather than an external keygen page. Check it out at [coracle.copylaradio.com](https://coracle.copylaradio.com).
+
+If you like Coracle and want to support its development, you can donate Ẑen via [G1FabLab#monnaie-libre](https://opencollective.com/monnaie-libre).
+
+# UPlanet / ẐEN (zen branch)
+
+[UPlanet](https://github.com/papiche/Astroport.ONE) is a cooperative ecosystem combining Nostr, IPFS and the [Ğ1](https://www.monnaie-libre.fr/) libre currency, run on self-hosted **Astroport** stations. This branch wires Coracle into that ecosystem:
+
+- **In-app MULTIPASS creation & restoration** (`src/util/multipass.ts`, `src/app/shared/MultipassLogin.svelte`) — no more redirect to an external `g1.html`/keygen page. Enter an email (and, to restore an existing account, its PASS code) and get a Nostr identity backed by a Ğ1 wallet, created directly against the `/g1nostr` endpoint of a chosen Astroport station.
+- **Astroport station picker** — when creating a MULTIPASS, pick which station hosts your account among your local swarm. Each station shown lists:
+  - its captain's Nostr profile (avatar, name, and a link to their full profile)
+  - available disk space, fetched live from the station's own published state
+  - its weekly PAF ("Participation Aux Frais", in Ẑen)
+  - a "closest station" button that geolocates you and picks the nearest one by GPS distance
+  - stations only reachable from their own local network (127.0.0.1) are hidden from the list, with a count shown instead
+- **Station-pinned identity** (`src/util/uplanet-detect.ts`) — the relay, API and IPFS gateway used after creating a MULTIPASS are the exact ones the chosen station published (`myRELAY`/`uSPOT`/`myIPFS`), not guessed from a hostname naming convention.
+- **ẐEN balances** (`src/util/zen.ts`) — Ẑen is a cooperative accounting unit derived from Ğ1: `(Ğ1_balance − 1) × 10 = Ẑen`. Two token types exist:
+  - **MULTIPASS** (usage tokens): pay for likes (1 Ẑen each, enforced by the relay's own write policy), relay operations, AI services.
+  - **ZEN Card** (property tokens): cooperative ownership shares (satellite/constellation/infrastructure tiers), split 3×1/3 between TREASURY/R&D/ASSETS.
 
 # Features
 
@@ -59,8 +77,8 @@ You can find a more complete changelog [here](./CHANGELOG.md).
 
 # Run Coracle locally:
 
-- Clone the project repository: `git clone https://github.com/coracle-social/coracle.git`
-- Navigate to the project directory: `cd coracle`
+- Clone the project repository: `git clone https://github.com/papiche/coracle.git`
+- Navigate to the project directory, zen branch : `cd coracle; git checkout zen;`
 - Install dependencies: `pnpm i`
 - Customize configuration in `.env` (optional, see below)
 - Start the development server: `pnpm run dev`
@@ -79,6 +97,16 @@ Make sure you have the android build tools in your path and run:
 ```
 pnpm run build:android --keystorepath <path> --keystorepass <password> --keystorealias <alias> --keystorealiaspass <password>
 ```
+
+# Deploying to IPFS (zen branch)
+
+`./build-web-compatible-ipfs.sh [gateway_base_url] [--skip-apk] [--skip-dns]` builds and publishes the whole app to IPFS in one step:
+
+1. Builds the Svelte app with relative asset paths (`base: "./"`) so it works from any IPFS gateway/CID, not just the domain root.
+2. Strips the service worker, which is incompatible with content-addressed IPFS URLs (and unregisters any previously-installed one for visitors upgrading from an older build).
+3. Builds the signed Android release APK (skipped automatically without `android/key.properties`, or via `--skip-apk`) and bundles it with `www/` into `dist/www/`, published under the same CID as the app.
+4. Publishes `dist/` to IPFS with `ipfs add -rw --pin`.
+5. Repoints `coracle.astroport.one`'s DNSLink at the new root CID via Astroport.ONE's `ovh.me.sh` (skipped automatically without OVH credentials, or via `--skip-dns`).
 
 # Customization
 
