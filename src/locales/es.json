@@ -145,10 +145,9 @@
     "cancel": "Cancelar",
     "submit": "Continuar",
     "successTitle": "Tu MULTIPASS está listo",
-    "saveWarning": "Guarda tu código PASS y tu parte SSSS en un lugar seguro, sin compartirlos. El código PASS restaura tu MULTIPASS en un nuevo dispositivo si tu email ya existe. La parte SSSS, enviada junto con el código PASS «0000» a la API /scan, declara el MULTIPASS comprometido y te envía por email todo su contenido (Nostr + uDRIVE). Si los pierdes, tu capitán puede volver a proporcionártelos.",
+    "saveWarning": "Guarda tu código PASS en un lugar seguro, sin compartirlo. Restaura tu MULTIPASS en un nuevo dispositivo si tu email ya existe. Si lo pierdes, tu capitán puede volver a proporcionártelo.",
     "pass": "Código PASS",
-    "ssss": "Parte SSSS",
-    "confirmSaved": "He guardado mi código PASS y mi parte SSSS",
+    "confirmSaved": "He guardado mi código PASS",
     "continue": "Iniciar sesión",
     "errors": {
       "MULTIPASS_EXISTS": "Esta cuenta ya existe — introduce su código PASS para restaurarla.",

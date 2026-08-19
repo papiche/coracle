@@ -145,10 +145,9 @@
     "cancel": "Cancel",
     "submit": "Continue",
     "successTitle": "Your MULTIPASS is ready",
-    "saveWarning": "Keep your PASS code and SSSS share somewhere safe, and don't share them. The PASS code restores your MULTIPASS on a new device if your email already exists. The SSSS share, sent together with PASS code \"0000\" to the /scan API, reports the MULTIPASS as compromised and emails you back its full content (Nostr + uDRIVE). If you lose them, your captain can provide them again.",
+    "saveWarning": "Keep your PASS code somewhere safe, and don't share it. It restores your MULTIPASS on a new device if your email already exists. If you lose it, your captain can provide it again.",
     "pass": "PASS code",
-    "ssss": "SSSS share",
-    "confirmSaved": "I've saved my PASS code and SSSS share",
+    "confirmSaved": "I've saved my PASS code",
     "continue": "Log in",
     "errors": {
       "MULTIPASS_EXISTS": "This account already exists — enter its PASS code to restore it.",

@@ -196,12 +196,6 @@
           class="select-all rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
           >{result.pass}</code>
       </div>
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium text-neutral-400">{$_("multipass.ssss")}</label>
-        <code
-          class="select-all break-all rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm"
-          >{result.ssss}</code>
-      </div>
       <label class="flex items-center gap-2 text-sm">
         <input type="checkbox" bind:checked={savedConfirmed} />
         {$_("multipass.confirmSaved")}
