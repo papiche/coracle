@@ -12,6 +12,8 @@ export interface ConstellationStation {
   domain: string
   ipCity?: string
   captain?: string
+  // Nostr pubkey (hex) of the station's captain — for showing/linking their profile.
+  captainHEX?: string
   myIPFS?: string
   myRELAY?: string
   ipfsnodeid?: string
@@ -96,6 +98,7 @@ export async function fetchConstellationStations(
       Object.assign(all[0], {
         ipCity: data.IPCity,
         captain: data.captain,
+        captainHEX: data.captainHEX,
         myIPFS: data.myIPFS,
         myRELAY: data.myRELAY,
         ipfsnodeid: data.IPFSNODEID || data.ipfsnodeid,
@@ -112,6 +115,7 @@ export async function fetchConstellationStations(
             domain: new URL(s.uSPOT).hostname,
             ipCity: s.IPCity,
             captain: s.captain,
+            captainHEX: s.captainHEX,
             myIPFS: s.myIPFS,
             myRELAY: s.myRELAY,
             ipfsnodeid: s.ipfsnodeid,

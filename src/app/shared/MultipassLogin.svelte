@@ -4,6 +4,7 @@
   import {loginWithNip01} from "@welshman/app"
   import Modal from "src/partials/Modal.svelte"
   import Button from "src/partials/Button.svelte"
+  import PersonBadgeSmall from "src/app/shared/PersonBadgeSmall.svelte"
   import {nsecDecode} from "src/util/nostr"
   import {
     resolveApiUrl,
@@ -218,16 +219,27 @@
             {$_("multipass.findClosest")}
           </button>
         </div>
-        <select
-          bind:value={selectedStation}
-          disabled={loading || stations.length === 0}
-          class="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-accent">
+        <div
+          class="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-lg border border-neutral-700 bg-neutral-900 p-1">
           {#each stations as station}
-            <option value={station}>
-              {stationLabel(station)}
-            </option>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={loading}
+                aria-pressed={selectedStation === station}
+                class="flex-1 truncate rounded-md px-2 py-1.5 text-left text-sm outline-none {selectedStation ===
+                station
+                  ? 'bg-accent/20 text-neutral-100'
+                  : 'text-neutral-300 hover:bg-neutral-800'}"
+                on:click={() => (selectedStation = station)}>
+                {stationLabel(station)}
+              </button>
+              {#if station.captainHEX}
+                <PersonBadgeSmall pubkey={station.captainHEX} class="shrink-0 text-xs" />
+              {/if}
+            </div>
           {/each}
-        </select>
+        </div>
         {#if hiddenLoopbackCount > 0}
           <p class="text-xs text-neutral-500">
             {$_("multipass.hiddenLocalStations", {values: {count: hiddenLoopbackCount}})}
