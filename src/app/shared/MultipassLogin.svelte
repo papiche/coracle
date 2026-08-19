@@ -2,6 +2,7 @@
   import {_, locale} from "svelte-i18n"
   import {onMount} from "svelte"
   import {loginWithNip01} from "@welshman/app"
+  import {joinRelay} from "src/engine"
   import Modal from "src/partials/Modal.svelte"
   import Button from "src/partials/Button.svelte"
   import PersonBadgeSmall from "src/app/shared/PersonBadgeSmall.svelte"
@@ -151,7 +152,7 @@
     }
   }
 
-  const confirmAndLogin = () => {
+  const confirmAndLogin = async () => {
     if (!result) return
 
     const secret = result.nsec.startsWith("nsec1") ? nsecDecode(result.nsec) : result.nsec
@@ -165,6 +166,18 @@
     }
 
     loginWithNip01(secret)
+
+    // A brand-new identity has no discoverable relay list (kind:10002) on any
+    // default/indexer relay yet — join the station's own relay directly so
+    // LoginConnect's post-login relay search doesn't come up empty.
+    if (selectedStation?.myRELAY) {
+      try {
+        await joinRelay(selectedStation.myRELAY)
+      } catch (err) {
+        logger.error("Failed to join station relay:", err)
+      }
+    }
+
     boot()
     onClose()
   }
