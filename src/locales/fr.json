@@ -143,7 +143,7 @@
     "cancel": "Annuler",
     "submit": "Continuer",
     "successTitle": "Votre MULTIPASS est prêt",
-    "saveWarning": "Enregistrez votre code PASS et votre part SSSS dès maintenant, en lieu sûr — ils ne seront plus jamais affichés et sont le seul moyen de récupérer ce compte.",
+    "saveWarning": "Conservez votre code PASS et votre part SSSS en lieu sûr, sans les partager. Le code PASS restaure votre MULTIPASS sur un nouvel appareil si votre email existe déjà. La part SSSS, envoyée avec le code PASS « 0000 » à l'API /scan, déclare le MULTIPASS compromis et vous renvoie par email tout son contenu (Nostr + uDRIVE). En cas de perte, votre capitaine peut vous les fournir à nouveau.",
     "pass": "Code PASS",
     "ssss": "Part SSSS",
     "confirmSaved": "J'ai enregistré mon code PASS et ma part SSSS",
