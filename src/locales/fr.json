@@ -104,6 +104,7 @@
     "noExtension": "Aucune extension NOSTR detectee. Installez nos2x ou Alby pour vous connecter, ou creez un compte UPlanet :",
     "noSignerNative": "Aucun signataire NOSTR détecté. Installez une application de signature (ex. Amber) ou créez un compte UPlanet — vos identifiants restent stockés en sécurité sur cet appareil.",
     "webPersistenceWarning": "En navigateur web, cette connexion MULTIPASS peut être perdue (cache vidé, navigation privée, changement d'appareil) : contrairement à l'application Android, vos identifiants n'y sont pas stockés dans un coffre-fort système. Pour une connexion durable, préférez une extension NOSTR (nos2x, Alby) — ou conservez bien votre code PASS, il permet de restaurer votre compte.",
+    "getAndroidApp": "Obtenir l'application Android",
     "createAccount": "Creer un compte UPlanet",
     "registerInstead": "S'inscrire",
     "use": "Utiliser {name}",

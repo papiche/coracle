@@ -36,6 +36,10 @@
   let signerApps: AppInfo[] = []
   let showMultipassLogin = false
 
+  // build-web-compatible-ipfs.sh bundles www/ (landing + APK download link)
+  // into dist/www/ at the same CID as the rest of the app — see About.svelte.
+  const apkPageUrl = "./www/"
+
   // NIP-55 signer apps (Amber…) only exist on Android — on web, nos2x/Alby is
   // the equivalent, and it's the only thing that keeps a MULTIPASS login
   // durable there (see login.webPersistenceWarning below): the OS Keystore
@@ -84,6 +88,10 @@
             <p class="mt-3 text-xs text-tinted-500">
               <i class="fa fa-triangle-exclamation mr-1" />{$_("login.webPersistenceWarning")}
             </p>
+            <Link class="btn btn-accent btn-sm mt-2" external href={apkPageUrl}>
+              <i class="fa fa-android" />
+              {$_("login.getAndroidApp")}
+            </Link>
           {/if}
         </div>
       {/if}
