@@ -156,6 +156,7 @@
       "PASS_UNAVAILABLE": "The PASS code is unavailable for this account.",
       "IDENTITY_CONFLICT": "These details match a different existing account.",
       "CREATION_IN_PROGRESS": "A creation is already in progress for this email, try again shortly.",
+      "NETWORK_ERROR": "Could not reach this station — check your connection or pick a different one.",
       "UNKNOWN": "MULTIPASS request failed."
     }
   },

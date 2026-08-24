@@ -7,6 +7,7 @@
 // Priority for both: explicit user preference ("Vos relais") → the logged-in
 // user's own home station (profile's ipfs_gw tag) → hostname auto-detection → default.
 import {get} from "svelte/store"
+import {Capacitor} from "@capacitor/core"
 import {synced, localStorageProvider} from "@welshman/store"
 import {pubkey, deriveProfile, getProfile} from "@welshman/app"
 import logger from "src/util/logger"
@@ -55,7 +56,7 @@ export const preferredApiUrl = synced<string | null>({
 let _cached: UPlanetServices | null | undefined
 let _verified: UPlanetServices | null = null
 
-const isPrivateIP = (hostname: string) =>
+export const isPrivateIP = (hostname: string) =>
   hostname === "localhost" ||
   hostname === "127.0.0.1" ||
   hostname.startsWith("192.168.") ||
@@ -186,6 +187,16 @@ export function detectUPlanetServices(): UPlanetServices | null {
   if (_cached !== undefined) return _cached
 
   if (typeof globalThis.location === "undefined") {
+    _cached = null
+    return null
+  }
+
+  // A native Capacitor app is always served from a fixed synthetic origin
+  // (https://localhost) regardless of which network the device is actually
+  // on — treating that as "browsing a local IPFS gateway" pointed every
+  // native user at http://127.0.0.1:54321, an address that only ever means
+  // something on a desktop browser's own machine, never on a phone.
+  if (Capacitor.isNativePlatform()) {
     _cached = null
     return null
   }

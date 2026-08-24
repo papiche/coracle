@@ -2,7 +2,7 @@
 // external g1.html/keygen redirect with an in-app flow (email + PIN, mirroring
 // zelkova's multipass_service.dart create/restore logic).
 import logger from "src/util/logger"
-import {detectUPlanetServices} from "src/util/uplanet-detect"
+import {detectUPlanetServices, isPrivateIP} from "src/util/uplanet-detect"
 
 export interface ConstellationStation {
   uSPOT: string
@@ -49,6 +49,7 @@ export type MultipassErrorCode =
   | "PASS_UNAVAILABLE"
   | "IDENTITY_CONFLICT"
   | "CREATION_IN_PROGRESS"
+  | "NETWORK_ERROR"
   | "UNKNOWN"
 
 export class MultipassError extends Error {
@@ -62,25 +63,24 @@ export class MultipassError extends Error {
 
 export interface ConstellationStationsResult {
   stations: ConstellationStation[]
-  // Swarm peers reported as loopback (127.0.0.1/localhost) and hidden from
-  // `stations` because they're only reachable from their own machine — not
-  // from wherever this browser happens to be.
+  // Swarm peers reported as loopback/private-LAN (127.0.0.1, 192.168.*, …)
+  // and hidden from `stations` because they're only reachable from their own
+  // machine/network — not from wherever this browser or app happens to be.
   hiddenLoopbackCount: number
 }
-
-const isLoopbackHost = (host: string) =>
-  host === "127.0.0.1" || host === "localhost" || host === "::1"
 
 /**
  * Station list for the "choose your Astroport" picker: the base station
  * itself plus its known constellation peers (Ustats.sh's SWARM[], surfaced by
  * a plain GET / on the uSPOT API — the same data g1.html uses to draw its map).
  *
- * A peer whose uSPOT is a loopback address (127.0.0.1/localhost) can't be
- * reached from a browser anywhere but that station's own machine, so it's
- * filtered out — unless coracle itself is currently being served from a
- * local Astroport gateway, in which case "127.0.0.1" genuinely means this
- * machine and stays visible.
+ * A peer whose uSPOT is a loopback/private-LAN address (127.0.0.1,
+ * 192.168.*, 10.*, 172.16-31.*) can't be reached from a browser or native app
+ * anywhere but that same machine/network, so it's filtered out — unless
+ * coracle itself is currently being served from a local Astroport gateway on
+ * that same network, in which case it genuinely stays reachable. The base
+ * station itself is never filtered: it's whatever resolveApiUrl() already
+ * health-checked as reachable, regardless of what its address looks like.
  */
 export async function fetchConstellationStations(
   baseApiUrl: string,
@@ -138,8 +138,13 @@ export async function fetchConstellationStations(
     return {stations: all, hiddenLoopbackCount: 0}
   }
 
-  const stations = all.filter(s => !isLoopbackHost(s.domain))
-  return {stations, hiddenLoopbackCount: all.length - stations.length}
+  const [baseStation, ...peers] = all
+  const reachablePeers = peers.filter(s => !isPrivateIP(s.domain))
+
+  return {
+    stations: [baseStation, ...reachablePeers],
+    hiddenLoopbackCount: peers.length - reachablePeers.length,
+  }
 }
 
 /**
@@ -181,6 +186,7 @@ const ERROR_MESSAGES: Record<MultipassErrorCode, string> = {
   PASS_UNAVAILABLE: "The PASS code is unavailable for this account.",
   IDENTITY_CONFLICT: "These details match a different existing account.",
   CREATION_IN_PROGRESS: "A creation is already in progress for this email, try again shortly.",
+  NETWORK_ERROR: "Could not reach this station — check your connection or pick a different one.",
   UNKNOWN: "MULTIPASS request failed.",
 }
 
@@ -209,7 +215,20 @@ export async function createOrRestoreMultipass(
   form.set("format", "json")
   if (passCode) form.set("pass_code", passCode)
 
-  const res = await fetch(`${stationUrl.replace(/\/$/, "")}/g1nostr`, {method: "POST", body: form})
+  const cleanUrl = stationUrl.replace(/\/$/, "")
+
+  let res: Response
+  try {
+    res = await fetch(`${cleanUrl}/g1nostr`, {method: "POST", body: form})
+  } catch (err) {
+    // A thrown fetch (DNS failure, connection refused, blocked mixed
+    // content…) means this station is simply unreachable from here — surface
+    // that distinctly instead of letting it fall through as "UNKNOWN".
+    throw new MultipassError(
+      "NETWORK_ERROR",
+      `Could not reach ${cleanUrl}: ${err instanceof Error ? err.message : String(err)}`,
+    )
+  }
 
   let data: any = null
   try {

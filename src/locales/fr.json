@@ -156,6 +156,7 @@
       "PASS_UNAVAILABLE": "Le code PASS n'est pas disponible pour ce compte.",
       "IDENTITY_CONFLICT": "Ces informations correspondent à un autre compte existant.",
       "CREATION_IN_PROGRESS": "Une création est déjà en cours pour cet email, réessayez dans quelques instants.",
+      "NETWORK_ERROR": "Impossible de contacter cette station — vérifiez votre connexion ou choisissez-en une autre.",
       "UNKNOWN": "Échec de la requête MULTIPASS."
     }
   },

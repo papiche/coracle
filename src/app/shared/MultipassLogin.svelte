@@ -141,6 +141,7 @@
       step = "success"
     } catch (err) {
       if (err instanceof MultipassError) {
+        logger.error(`MULTIPASS request failed (${err.code}):`, err.message)
         errorMessage = errorMessageFor(err.code)
         if (err.code === "MULTIPASS_EXISTS") step = "need-pin"
       } else {
