@@ -87,6 +87,39 @@ export const escapeHtml = html => {
   return div.innerHTML
 }
 
+/**
+ * Upsert Open Graph / Twitter Card <meta> tags for link-preview purposes.
+ * Client-side only, so it has no effect on classic crawlers that don't
+ * execute JS (Twitter/Facebook/Telegram's basic unfurlers) — by the time
+ * this runs, they've already fetched and parsed the static index.html. Real
+ * cross-platform previews need server-side rendering, which this static SPA
+ * doesn't have (see UPassport/templates/theater-modal.html for the
+ * server-templated equivalent). Still worth doing for anything that *does*
+ * render JS (in-app shares, headless-rendering unfurlers, browser tooling).
+ */
+export const setSocialMeta = (meta: {title?: string; description?: string; image?: string}) => {
+  const upsert = (attr: "property" | "name", key: string, content?: string) => {
+    if (!content) return
+
+    let tag = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)
+
+    if (!tag) {
+      tag = document.createElement("meta")
+      tag.setAttribute(attr, key)
+      document.head.appendChild(tag)
+    }
+
+    tag.setAttribute("content", content)
+  }
+
+  upsert("property", "og:title", meta.title)
+  upsert("property", "og:description", meta.description)
+  upsert("property", "og:image", meta.image)
+  upsert("name", "twitter:title", meta.title)
+  upsert("name", "twitter:description", meta.description)
+  upsert("name", "twitter:image", meta.image)
+}
+
 export const isMobile =
   localStorage.mobile || window.navigator.maxTouchPoints > 1 || window.innerWidth < 400
 

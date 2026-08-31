@@ -9,23 +9,43 @@
   import NoteHeader from "src/app/shared/NoteHeader.svelte"
   import NoteActions from "src/app/shared/NoteActions.svelte"
   import NoteReply from "src/app/shared/NoteReply.svelte"
+  import Spinner from "src/partials/Spinner.svelte"
   import {extractVideoInfo, cleanVideoTitle} from "src/util/video"
-  import {getSetting, env, myLoad} from "src/engine"
+  import {setSocialMeta} from "src/util/html"
+  import {getSetting, env, myLoad, deriveEvent} from "src/engine"
   import {router} from "src/app/util"
 
-  // Route path param, unused — events/index (via cx) carry the actual state.
-  export const id = ""
+  // Route param — used only as a fallback fetch key. Normally events/index
+  // arrive via cx() from whatever opened the theater (VideoCard.svelte), but
+  // a direct/shared link (no prior in-app navigation) has no such context,
+  // so this component must be able to fetch the single event itself.
+  export let id = ""
   export let events: TrustedEvent[] = []
   export let index = 0
 
   let currentIndex = index
   let replyIsOpen = false
 
-  $: event = events[currentIndex]
+  const fetchedEvent = events.length === 0 && id ? deriveEvent(id) : null
+
+  $: effectiveEvents = events.length > 0 ? events : $fetchedEvent ? [$fetchedEvent] : []
+  $: event = effectiveEvents[currentIndex]
   $: info = event ? extractVideoInfo(event) : null
   $: title = info ? cleanVideoTitle(info) : ""
   $: hasPrev = currentIndex > 0
-  $: hasNext = currentIndex < events.length - 1
+  $: hasNext = currentIndex < effectiveEvents.length - 1
+
+  $: if (title) document.title = title
+
+  // Best-effort only — see setSocialMeta's own doc comment on why this
+  // doesn't help classic (non-JS) link-preview crawlers.
+  $: if (event && info) {
+    setSocialMeta({
+      title,
+      description: event.content,
+      image: info.thumbUrl,
+    })
+  }
 
   // Deletion is only safe while nothing else references this event: kind
   // 21/22 are non-addressable, so "deleting" means publish a kind-5 request
@@ -111,8 +131,8 @@
 
 <div class="z-50 fixed inset-0 flex flex-col bg-black">
   <div class="flex items-center justify-between p-3">
-    {#if events.length > 1}
-      <span class="text-sm text-neutral-400">{currentIndex + 1} / {events.length}</span>
+    {#if effectiveEvents.length > 1}
+      <span class="text-sm text-neutral-400">{currentIndex + 1} / {effectiveEvents.length}</span>
     {:else}
       <span />
     {/if}
@@ -132,6 +152,12 @@
       </button>
     </div>
   </div>
+
+  {#if !event && fetchedEvent}
+    <div class="flex flex-1 items-center justify-center">
+      <Spinner />
+    </div>
+  {/if}
 
   {#if event && info}
     <div class="relative flex flex-1 items-center justify-center overflow-hidden px-2">
