@@ -5,6 +5,7 @@
   import {joinRelay} from "src/engine"
   import Modal from "src/partials/Modal.svelte"
   import Button from "src/partials/Button.svelte"
+  import Link from "src/partials/Link.svelte"
   import PersonBadgeSmall from "src/app/shared/PersonBadgeSmall.svelte"
   import {nsecDecode} from "src/util/nostr"
   import {
@@ -18,16 +19,24 @@
     fetchConstellationStations,
     enrichStationsWithDiskSpace,
     createOrRestoreMultipass,
+    reportPassAttempts,
+    queryHomeStationForEmail,
     MultipassError,
     type ConstellationStation,
     type MultipassResult,
   } from "src/util/multipass"
+  import {getIpfsGateway} from "src/util/ipfs"
   import logger from "src/util/logger"
   import {boot} from "src/app/state"
 
   export let onClose: () => void
 
   type Step = "form" | "need-pin" | "success"
+
+  // New account creation happens on UPlanet/earth (g1.html), never here —
+  // coracle only restores an existing MULTIPASS (mirrors zelkova's
+  // recover_only doctrine, see src/util/multipass.ts).
+  const keygenUrl = `${getIpfsGateway()}/ipns/copylaradio.com/g1.html`
 
   let step: Step = "form"
   let stations: ConstellationStation[] = []
@@ -38,8 +47,62 @@
   let loading = true
   let locating = false
   let errorMessage = ""
+  let errorCode: MultipassError["code"] | null = null
   let result: MultipassResult | null = null
   let savedConfirmed = false
+
+  // ── Verrouillage anti-bruteforce PASS ─────────────────────────────────────
+  // 3 codes PASS erronés consécutifs (même email) → POST /g1nostr/alert :
+  // invalide le PASS et notifie le capitaine par email. Réinitialisé à
+  // chaque changement d'email pour ne compter que les tentatives sur le
+  // compte actuellement ciblé.
+  let passAttempts = 0
+  let attemptsEmail = ""
+
+  $: if (email !== attemptsEmail) {
+    attemptsEmail = email
+    passAttempts = 0
+  }
+
+  // ── Détection automatique de la station "Home" ────────────────────────────
+  // La récupération ne fonctionne que depuis la station où le MULTIPASS a
+  // été créé — deviner la mauvaise mène droit à MULTIPASS_NOT_FOUND. Requête
+  // debouncée (800ms) sur un relay de la constellation, comme
+  // home_station_lookup.dart côté Zelkova.
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  let homeDetecting = false
+  let homeDetectedLabel = ""
+  let emailDebounce: ReturnType<typeof setTimeout> | undefined
+
+  const onEmailInput = () => {
+    homeDetectedLabel = ""
+    if (emailDebounce) clearTimeout(emailDebounce)
+
+    const value = email.trim()
+    if (!EMAIL_RE.test(value)) {
+      homeDetecting = false
+      return
+    }
+
+    homeDetecting = true
+    emailDebounce = setTimeout(() => detectHomeStation(value), 800)
+  }
+
+  const detectHomeStation = async (value: string) => {
+    const relayUrl = stations.find(s => s.myRELAY)?.myRELAY || ""
+    try {
+      const ipfsId = await queryHomeStationForEmail(value, relayUrl)
+      const found = ipfsId ? stations.find(s => s.ipfsnodeid === ipfsId) : null
+      if (found) {
+        selectedStation = found
+        homeDetectedLabel = stationLabel(found)
+      }
+    } catch (err) {
+      logger.info("[multipass] Home station detection failed:", err)
+    } finally {
+      homeDetecting = false
+    }
+  }
 
   onMount(async () => {
     try {
@@ -119,6 +182,7 @@
 
     loading = true
     errorMessage = ""
+    errorCode = null
 
     try {
       let lat: string | undefined
@@ -142,8 +206,22 @@
     } catch (err) {
       if (err instanceof MultipassError) {
         logger.error(`MULTIPASS request failed (${err.code}):`, err.message)
-        errorMessage = errorMessageFor(err.code)
-        if (err.code === "MULTIPASS_EXISTS") step = "need-pin"
+        errorCode = err.code
+        if (err.code === "MULTIPASS_EXISTS") {
+          step = "need-pin"
+          errorMessage = errorMessageFor(err.code)
+        } else if (err.code === "INVALID_PASS") {
+          passAttempts += 1
+          if (passAttempts >= 3) {
+            passAttempts = 0
+            reportPassAttempts(selectedStation.uSPOT, email, 3)
+            errorMessage = $_("multipass.passLocked")
+          } else {
+            errorMessage = errorMessageFor(err.code)
+          }
+        } else {
+          errorMessage = errorMessageFor(err.code)
+        }
       } else {
         logger.error("MULTIPASS request failed:", err)
         errorMessage = $_("multipass.errors.UNKNOWN")
@@ -259,9 +337,21 @@
         <label class="text-xs font-medium text-neutral-400">{$_("multipass.email")}</label>
         <input
           bind:value={email}
+          on:input={onEmailInput}
           disabled={loading}
           type="email"
           class="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-accent" />
+        {#if homeDetecting}
+          <p class="text-xs text-neutral-500">
+            <i class="fa fa-spinner fa-spin" />
+            {$_("multipass.detecting")}
+          </p>
+        {:else if homeDetectedLabel}
+          <p class="text-xs text-accent">
+            <i class="fa fa-location-dot" />
+            {$_("multipass.detected", {values: {station: homeDetectedLabel}})}
+          </p>
+        {/if}
       </div>
 
       {#if step === "need-pin"}
@@ -278,6 +368,11 @@
 
       {#if errorMessage}
         <p class="text-sm text-danger">{errorMessage}</p>
+        {#if errorCode === "MULTIPASS_NOT_FOUND"}
+          <Link class="text-xs text-accent hover:underline" external href={keygenUrl}>
+            {$_("multipass.createElsewhere")}
+          </Link>
+        {/if}
       {/if}
 
       <div class="flex justify-end gap-2">

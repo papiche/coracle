@@ -45,6 +45,7 @@ export interface MultipassResult {
 
 export type MultipassErrorCode =
   | "MULTIPASS_EXISTS"
+  | "MULTIPASS_NOT_FOUND"
   | "INVALID_PASS"
   | "PASS_UNAVAILABLE"
   | "IDENTITY_CONFLICT"
@@ -182,6 +183,7 @@ const LANG_2LETTER = /^[a-z]{2}$/
 
 const ERROR_MESSAGES: Record<MultipassErrorCode, string> = {
   MULTIPASS_EXISTS: "This account already exists — a PASS code is required to restore it.",
+  MULTIPASS_NOT_FOUND: "No MULTIPASS found for this email on this station.",
   INVALID_PASS: "Incorrect PASS code.",
   PASS_UNAVAILABLE: "The PASS code is unavailable for this account.",
   IDENTITY_CONFLICT: "These details match a different existing account.",
@@ -191,9 +193,15 @@ const ERROR_MESSAGES: Record<MultipassErrorCode, string> = {
 }
 
 /**
- * Create or restore a MULTIPASS on the given station — same endpoint, same
+ * Restore an existing MULTIPASS on the given station — same endpoint, same
  * shape as zelkova's createMultipass(): no pass_code on first try; a 409
  * MULTIPASS_EXISTS means the caller should re-submit with the user's PIN.
+ *
+ * Always sends recover_only=true (mirrors zelkova's doctrine): coracle no
+ * longer creates a new MULTIPASS itself — an unknown email gets a 404
+ * MULTIPASS_NOT_FOUND instead of a silently-created empty account, in case
+ * the user picked the wrong station. New accounts are created on
+ * UPlanet/earth (see keygenUrl in InviteCreate.svelte / MultipassLogin.svelte).
  */
 export async function createOrRestoreMultipass(
   stationUrl: string,
@@ -213,6 +221,7 @@ export async function createOrRestoreMultipass(
   form.set("salt", "")
   form.set("pepper", "")
   form.set("format", "json")
+  form.set("recover_only", "true")
   if (passCode) form.set("pass_code", passCode)
 
   const cleanUrl = stationUrl.replace(/\/$/, "")
@@ -243,4 +252,100 @@ export async function createOrRestoreMultipass(
     data?.error in ERROR_MESSAGES ? (data.error as MultipassErrorCode) : "UNKNOWN"
 
   throw new MultipassError(code, data?.detail || data?.message || ERROR_MESSAGES[code])
+}
+
+/**
+ * Report failed PASS attempts to the station — after 3 consecutive
+ * failures, POST /g1nostr/alert invalidates this account's PASS and emails
+ * the captain (see UPassport routers/identity.py::pass_attempts_alert).
+ * Best-effort: a network failure here must never block the UI, the caller
+ * already treats the account as locked at this point.
+ */
+export async function reportPassAttempts(
+  stationUrl: string,
+  email: string,
+  attempts: number,
+): Promise<void> {
+  const cleanUrl = stationUrl.replace(/\/$/, "")
+
+  try {
+    await fetch(`${cleanUrl}/g1nostr/alert`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email: email.trim(), attempts}),
+    })
+  } catch (err) {
+    logger.info("[multipass] Could not report PASS attempts:", err)
+  }
+}
+
+/**
+ * Look up which constellation station already hosts a MULTIPASS for this
+ * email — recovery only works from that station's own g1.sh/nostr data, so
+ * guessing wrong wastes a round trip through MULTIPASS_NOT_FOUND. Mirrors
+ * zelkova's home_station_lookup.dart: queries a NOSTR relay for a kind 0
+ * profile tagged `["i","email:<email>",""]` (written by
+ * Astroport.ONE/tools/nostr_setup_profile.py) and reads
+ * `content.home_station` ("IPFSNODEID:NODE_HEX"). Constellation-wide thanks
+ * to backfill_constellation.sh (daily swarm sync), so querying any single
+ * relay is enough — with up to 24h sync latency. Returns the IPFSNODEID
+ * half, or null if absent from this relay / unreachable / timed out.
+ */
+export async function queryHomeStationForEmail(
+  email: string,
+  relayUrl: string,
+): Promise<string | null> {
+  if (!relayUrl) return null
+
+  return new Promise<string | null>(resolve => {
+    let settled = false
+    let ws: WebSocket
+
+    const finish = (value: string | null) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      try {
+        ws?.close()
+      } catch {
+        // already closed
+      }
+      resolve(value)
+    }
+
+    const timer = setTimeout(() => finish(null), 6000)
+
+    try {
+      ws = new WebSocket(relayUrl)
+    } catch (err) {
+      logger.info("[multipass] Home station lookup: could not open relay:", err)
+      clearTimeout(timer)
+      resolve(null)
+      return
+    }
+
+    const subId = `hs_${Math.random().toString(36).slice(2)}`
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify(["REQ", subId, {kinds: [0], "#i": [`email:${email}`], limit: 1}]))
+    }
+
+    ws.onmessage = ev => {
+      try {
+        const msg = JSON.parse(ev.data)
+        if (msg[0] === "EOSE") {
+          finish(null)
+        } else if (msg[0] === "EVENT" && msg[2]?.kind === 0) {
+          const content = JSON.parse(msg[2].content || "{}")
+          const homeStation: string | undefined = content.home_station
+          finish(homeStation ? homeStation.split(":")[0] : null)
+        }
+      } catch (err) {
+        logger.info("[multipass] Home station lookup: parse error:", err)
+      }
+    }
+
+    ws.onerror = () => finish(null)
+    ws.onclose = () => finish(null)
+  })
 }
