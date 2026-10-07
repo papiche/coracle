@@ -212,7 +212,9 @@
           errorMessage = errorMessageFor(err.code)
         } else if (err.code === "INVALID_PASS") {
           passAttempts += 1
-          if (passAttempts >= 3) {
+          // UPassport compte aussi les échecs (toutes sessions confondues)
+          // et peut verrouiller avant notre propre compteur local.
+          if (err.locked || passAttempts >= 3) {
             passAttempts = 0
             reportPassAttempts(selectedStation.uSPOT, email, 3)
             errorMessage = $_("multipass.passLocked")

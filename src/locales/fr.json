@@ -159,6 +159,7 @@
       "MULTIPASS_NOT_FOUND": "Aucun MULTIPASS trouvé pour cet email sur cette station.",
       "INVALID_PASS": "Code PASS incorrect.",
       "PASS_UNAVAILABLE": "Le code PASS n'est pas disponible pour ce compte.",
+      "PASS_DISABLED": "La récupération par code PASS est désactivée pour ce compte — contactez le capitaine de votre station.",
       "IDENTITY_CONFLICT": "Ces informations correspondent à un autre compte existant.",
       "CREATION_IN_PROGRESS": "Une création est déjà en cours pour cet email, réessayez dans quelques instants.",
       "NETWORK_ERROR": "Impossible de contacter cette station — vérifiez votre connexion ou choisissez-en une autre.",

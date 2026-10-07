@@ -48,6 +48,7 @@ export type MultipassErrorCode =
   | "MULTIPASS_NOT_FOUND"
   | "INVALID_PASS"
   | "PASS_UNAVAILABLE"
+  | "PASS_DISABLED"
   | "IDENTITY_CONFLICT"
   | "CREATION_IN_PROGRESS"
   | "NETWORK_ERROR"
@@ -55,10 +56,13 @@ export type MultipassErrorCode =
 
 export class MultipassError extends Error {
   code: MultipassErrorCode
+  /** Set by UPassport when this failure locked the PASS server-side. */
+  locked: boolean
 
-  constructor(code: MultipassErrorCode, message: string) {
+  constructor(code: MultipassErrorCode, message: string, locked = false) {
     super(message)
     this.code = code
+    this.locked = locked
   }
 }
 
@@ -186,6 +190,7 @@ const ERROR_MESSAGES: Record<MultipassErrorCode, string> = {
   MULTIPASS_NOT_FOUND: "No MULTIPASS found for this email on this station.",
   INVALID_PASS: "Incorrect PASS code.",
   PASS_UNAVAILABLE: "The PASS code is unavailable for this account.",
+  PASS_DISABLED: "PASS recovery is disabled for this account — contact your station's Captain.",
   IDENTITY_CONFLICT: "These details match a different existing account.",
   CREATION_IN_PROGRESS: "A creation is already in progress for this email, try again shortly.",
   NETWORK_ERROR: "Could not reach this station — check your connection or pick a different one.",
@@ -216,8 +221,11 @@ export async function createOrRestoreMultipass(
   const form = new FormData()
   form.set("email", email.trim())
   form.set("lang", LANG_2LETTER.test(lang) ? lang : "fr")
-  form.set("lat", lat || "")
-  form.set("lon", lon || "")
+  // lat/lon sont des champs Form REQUIS côté UPassport (G1NostrForm) : une
+  // chaîne vide est vue comme absente → 422 avant toute vérif du PASS. Sans
+  // géolocalisation, "0.00" comme zelkova (ignoré en récupération).
+  form.set("lat", lat || "0.00")
+  form.set("lon", lon || "0.00")
   form.set("salt", "")
   form.set("pepper", "")
   form.set("format", "json")
@@ -251,7 +259,11 @@ export async function createOrRestoreMultipass(
   const code: MultipassErrorCode =
     data?.error in ERROR_MESSAGES ? (data.error as MultipassErrorCode) : "UNKNOWN"
 
-  throw new MultipassError(code, data?.detail || data?.message || ERROR_MESSAGES[code])
+  throw new MultipassError(
+    code,
+    data?.detail || data?.message || ERROR_MESSAGES[code],
+    data?.locked === true,
+  )
 }
 
 /**
