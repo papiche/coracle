@@ -72,10 +72,13 @@
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   let homeDetecting = false
   let homeDetectedLabel = ""
+  // Home station connue (kind 0) mais absente de la liste SWARM chargée.
+  let homeNotInSwarm = false
   let emailDebounce: ReturnType<typeof setTimeout> | undefined
 
   const onEmailInput = () => {
     homeDetectedLabel = ""
+    homeNotInSwarm = false
     if (emailDebounce) clearTimeout(emailDebounce)
 
     const value = email.trim()
@@ -89,13 +92,30 @@
   }
 
   const detectHomeStation = async (value: string) => {
-    const relayUrl = stations.find(s => s.myRELAY)?.myRELAY || ""
+    // Un relay suffit en théorie (backfill N²), mais il peut être injoignable
+    // ou en retard de synchronisation : on essaie jusqu'à 3 relays distincts.
+    const relays = [...new Set(stations.map(s => s.myRELAY).filter(Boolean))].slice(0, 3)
+
     try {
-      const ipfsId = await queryHomeStationForEmail(value, relayUrl)
-      const found = ipfsId ? stations.find(s => s.ipfsnodeid === ipfsId) : null
+      let ipfsId: string | null = null
+
+      for (const relayUrl of relays) {
+        ipfsId = await queryHomeStationForEmail(value, relayUrl as string)
+        if (ipfsId) break
+      }
+
+      if (!ipfsId) return
+
+      const found = stations.find(s => s.ipfsnodeid === ipfsId)
+
       if (found) {
         selectedStation = found
         homeDetectedLabel = stationLabel(found)
+      } else {
+        // Ne pas retomber en silence sur une autre station : elle ne connaîtrait
+        // pas ce compte (MULTIPASS_NOT_FOUND inexplicable).
+        logger.info(`[multipass] Home station ${ipfsId} absent du SWARM`)
+        homeNotInSwarm = true
       }
     } catch (err) {
       logger.info("[multipass] Home station detection failed:", err)
@@ -352,6 +372,11 @@
           <p class="text-xs text-accent">
             <i class="fa fa-location-dot" />
             {$_("multipass.detected", {values: {station: homeDetectedLabel}})}
+          </p>
+        {:else if homeNotInSwarm}
+          <p class="text-xs text-warning">
+            <i class="fa fa-triangle-exclamation" />
+            {$_("multipass.homeNotInSwarm")}
           </p>
         {/if}
       </div>

@@ -146,6 +146,7 @@
     "email": "Email",
     "detecting": "Looking up your home station…",
     "detected": "Home station detected: {station}",
+    "homeNotInSwarm": "Your home station is not in the list: pick it manually, otherwise recovery will fail.",
     "pin": "PASS code",
     "cancel": "Cancel",
     "submit": "Continue",

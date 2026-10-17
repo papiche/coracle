@@ -146,6 +146,7 @@
     "email": "Email",
     "detecting": "Recherche de votre station d'origine…",
     "detected": "Station d'origine détectée : {station}",
+    "homeNotInSwarm": "Votre station d'origine n'est pas dans la liste : choisissez-la manuellement, sinon la récupération échouera.",
     "pin": "Code PASS",
     "cancel": "Annuler",
     "submit": "Continuer",
