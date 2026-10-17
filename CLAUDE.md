@@ -78,3 +78,9 @@ This fork adds UPlanet/ẐEN cooperative economy features:
 - PRs should target `dev` branch (auto-deployed to dev.coracle.social).
 - `master` auto-deploys to app.coracle.social.
 - Never add Co-Authored-By in commits.
+
+## Visio vdo.ninja (2026-10-17)
+- `src/util/nip98.ts` (`nip98Header(url, method)`) : signature NIP-98 sans état, valable sur toute station (routes `/api/visio/room`, `/api/myGPS`…). Le flux NIP-42 de `vocals.ts` reste pour les routes historiques.
+- `src/util/visio.ts` (pur, testé : `tests/unit/util/visio.test.ts`) : `buildVisioUrl` (rôles `call` | `studio` | `view`, mot de passe dans le fragment `#p=`, **jamais un `&view` nu pour un spectateur : c'est `&scene`**), invitations `uplanet.visio` (`encodeInvite`/`inspectInvite`/`parseInvite`, validation stricte), `createVisioRoom` (POST `/api/visio/room`).
+- `src/engine/visio.ts` : opt-in `presenceEnabled` (localStorage `uplanet.presence`, Réglages → « Video calls: be reachable »), présence kind 24315 + sonnerie 24316 (amis MUTUELS seulement, déchiffrement jamais pour un inconnu), `callPerson(channelId, peer)` (sonnerie si en ligne + message d'invitation dans le fil + ouverture), `startVisioServices()` appelé par `App.svelte`.
+- UI : bouton appel + « online » dans `ChannelsDetail.svelte` (conversation à deux), carte « Join / expired » dans `Message.svelte`, `VisioHost.svelte` (invitation flottante + panneau iframe créé à l'ouverture seulement ; la salle n'est jamais dans l'URL de l'appli). Android : `RECORD_AUDIO` + `MODIFY_AUDIO_SETTINGS` déclarés. zap.stream retiré de `NoteContentKind30311.svelte` (le lien est le tag `streaming` de l'auteur, https seulement). Spéc : NIP-101/KIND_REGISTRY.md.

@@ -16,7 +16,7 @@
   import Heading from "src/partials/Heading.svelte"
   import {fuzzy} from "src/util/misc"
   import SearchSelect from "src/partials/SearchSelect.svelte"
-  import {env, userSettings, publishSettings} from "src/engine"
+  import {env, userSettings, publishSettings, presenceEnabled} from "src/engine"
   import {detectUPlanetServices} from "src/util/uplanet-detect"
 
   const uplanet = detectUPlanetServices()
@@ -80,6 +80,15 @@
       <Toggle bind:value={values.auto_authenticate2} />
       <p slot="info">
         {$_("settings.authenticateRelaysInfo", {values: {appName}})}
+      </p>
+    </FieldInline>
+    <FieldInline label="Video calls: be reachable">
+      <Toggle bind:value={$presenceEnabled} />
+      <p slot="info">
+        Mutual follows (you follow each other) see that you are online and can call you; you receive
+        their calls live. Nothing is stored — relays only forward it. They do see <b>who</b> signals
+        presence to <b>whom</b>, like a private message. This setting applies to this browser only
+        and takes effect immediately.
       </p>
     </FieldInline>
     <Field label={$_("settings.blossomUrls")}>

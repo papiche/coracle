@@ -36,5 +36,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <!-- Required for QR scanner (Search page) -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Visio vdo.ninja (iframe) : le micro doit être déclaré, sinon getUserMedia est refusé dans la WebView -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

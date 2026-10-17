@@ -13,7 +13,8 @@
   import PersonName from "src/app/shared/PersonName.svelte"
   import NoteInfo from "src/app/shared/NoteInfo.svelte"
   import ExpirationBadge from "src/app/shared/ExpirationBadge.svelte"
-  import {getMessageView, userSettings} from "src/engine"
+  import Button from "src/partials/Button.svelte"
+  import {getMessageView, userSettings, openVisio} from "src/engine"
   import {router} from "src/app/util/router"
 
   export let message
@@ -59,7 +60,22 @@
             {/if}
           </div>
         {/if}
-        {#if view.imageUrl}
+        {#if view.visio}
+          <div class="flex flex-col items-start gap-2">
+            <div class="flex items-center gap-2">
+              <i class="fa fa-video" />
+              {message.pubkey === $session.pubkey
+                ? "You invited to a video call"
+                : "Video call invitation"}
+              {#if view.visio.expired}<i class="text-neutral-400">— expired</i>{/if}
+            </div>
+            {#if !view.visio.expired}
+              <Button class="btn btn-accent" on:click={() => openVisio(view.visio.invite)}>
+                Join
+              </Button>
+            {/if}
+          </div>
+        {:else if view.imageUrl}
           <div class="flex items-center gap-1 text-xs text-neutral-400">
             <i class="fa fa-lock" />
             {view.text}

@@ -1,11 +1,8 @@
 <script lang="ts">
   import {fromPairs} from "@welshman/lib"
-  import {Address} from "@welshman/util"
   import {urlIsMedia} from "@welshman/content"
-  import {Router} from "@welshman/router"
   import Card from "src/partials/Card.svelte"
   import Chip from "src/partials/Chip.svelte"
-  import Link from "src/partials/Link.svelte"
   import FlexColumn from "src/partials/FlexColumn.svelte"
   import NoteContentLinks from "src/app/shared/NoteContentLinks.svelte"
   import NoteContentTopics from "src/app/shared/NoteContentTopics.svelte"
@@ -14,12 +11,15 @@
   export let note
   export let showMedia = false
 
-  const address = Address.fromEvent(note, Router.get().Event(note).getUrls())
-  const {title, summary, image, status, p} = fromPairs(note.tags) as Record<string, string>
+  const {title, summary, image, status, p, streaming} = fromPairs(note.tags) as Record<string, string>
+
+  // Le lien est celui que l'auteur annonce lui-même dans son événement (tag "streaming" :
+  // salle de visio UPlanet…), jamais un service tiers. Seul https est suivi.
+  const href = streaming && /^https:\/\//i.test(streaming) ? streaming : null
 </script>
 
-<Link external href={`https://zap.stream/${address.toNaddr()}`}>
-  <Card interactive>
+<svelte:element this={href ? "a" : "div"} {...href ? {href, target: "_blank", rel: "noopener noreferrer"} : {}}>
+  <Card interactive={Boolean(href)}>
     <FlexColumn>
       {#if p}
         <PersonBadge pubkey={p} />
@@ -40,4 +40,4 @@
       <NoteContentTopics {note} />
     </FlexColumn>
   </Card>
-</Link>
+</svelte:element>

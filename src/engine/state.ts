@@ -146,6 +146,8 @@ import {
   parseUencImgEnvelope,
   decryptUencImage,
 } from "src/util/uplanetChannels"
+import {inspectInvite} from "src/util/visio"
+import type {VisioInvite} from "src/util/visio"
 
 export const env = {
   CLIENT_ID: import.meta.env.VITE_CLIENT_ID as string,
@@ -223,10 +225,15 @@ export type MessageView = {
   channelLabel: string | null
   channelName: string | null
   imageUrl?: string
+  visio?: {invite: VisioInvite; expired: boolean}
 }
 
 export const getMessageView = async (e: TrustedEvent): Promise<MessageView> => {
   const raw = (e.kind === 4 ? await ensureMessagePlaintext(e) : e.content) || ""
+
+  const visio = inspectInvite(raw)
+
+  if (visio) return {text: "", channelLabel: null, channelName: null, visio}
 
   const uencImg = parseUencImgEnvelope(raw)
 

@@ -18,7 +18,15 @@
   import PersonAbout from "src/app/shared/PersonAbout.svelte"
   import {router} from "src/app/util/router"
   import Popover from "src/partials/Popover.svelte"
-  import {getChannelIdFromEvent, listenForMessages, setChecked} from "src/engine"
+  import {
+    callPerson,
+    derivePresence,
+    getChannelIdFromEvent,
+    listenForMessages,
+    presenceEnabled,
+    setChecked,
+  } from "src/engine"
+  import {showWarning} from "src/partials/Toast.svelte"
 
   export let pubkeys
   export let channelId
@@ -38,6 +46,23 @@
   )
 
   let isAccepted
+  let calling = false
+
+  // Appel visio : conversation à deux seulement (pas de salle de groupe pour l'instant)
+  const canCall = pubkeys.length === 1 && pubkeys[0] !== $session?.pubkey
+  const presence = derivePresence(pubkeys[0])
+
+  const call = async () => {
+    calling = true
+
+    try {
+      await callPerson(channelId, pubkeys[0], displayProfileByPubkey($session.pubkey))
+    } catch (e: any) {
+      showWarning(`Video call failed: ${e.message || "unknown error"}`)
+    }
+
+    calling = false
+  }
 
   const showPerson = pubkey => router.at("people").of(pubkey).open()
 
@@ -90,6 +115,18 @@
         {/if}
       </div>
     </div>
+    {#if canCall}
+      <div class="flex items-center gap-2">
+        {#if $presenceEnabled && $presence !== "offline"}
+          <span class="text-xs text-neutral-300">
+            {$presence === "visio" ? "in a call" : $presence === "away" ? "away" : "online"}
+          </span>
+        {/if}
+        <Button class="btn btn-low" loading={calling} title="Video call" on:click={call}>
+          <i class="fa fa-video" />
+        </Button>
+      </div>
+    {/if}
     {#if $pubkeysWithoutMessaging.length > 0}
       <div class="flex items-center">
         <Popover triggerType="mouseenter" placement="left">

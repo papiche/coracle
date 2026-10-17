@@ -15,12 +15,13 @@
   import logger from "src/util/logger"
   import * as misc from "src/util/misc"
   import * as nostr from "src/util/nostr"
-  import {ready} from "src/engine"
+  import {ready, startVisioServices} from "src/engine"
   import * as engine from "src/engine"
   import * as domain from "src/domain"
   import {loadUserData} from "src/app/state"
   import {themeVariables, appName} from "src/partials/state"
   import Toast from "src/partials/Toast.svelte"
+  import VisioHost from "src/app/shared/VisioHost.svelte"
   import ChatEnable from "src/app/views/ChatEnable.svelte"
   import Menu from "src/app/Menu.svelte"
   import Routes from "src/app/Routes.svelte"
@@ -421,6 +422,9 @@
 
     const unsubRouter = router.listen()
 
+    // Présence + sonnerie de visio : ne démarrent que si le membre les a activées (Réglages)
+    const stopVisio = startVisioServices()
+
     // Android hardware back button — close modals or navigate back (Capacitor only)
     let removeBackListener: (() => void) | null = null
     if (Capacitor.isNativePlatform()) {
@@ -436,6 +440,7 @@
     }
 
     return () => {
+      stopVisio()
       unsubPage()
       unsubModal()
       unsubRouter()
@@ -482,6 +487,7 @@
       <Nav />
       <Menu />
       <Toast />
+      <VisioHost />
     {/key}
   </div>
 {/await}
