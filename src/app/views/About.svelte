@@ -10,7 +10,7 @@
   import Heading from "src/partials/Heading.svelte"
   import {router} from "src/app/util"
   import {loadPubkeys, env} from "src/engine"
-  import {resolveApiUrl} from "src/util/uplanet-detect"
+  import {resolveApiUrl, isAstroportdApiUrl} from "src/util/uplanet-detect"
 
   const hash = import.meta.env.VITE_BUILD_HASH
   const openFeedbackForm = () => router.at("feedback/create").open()
@@ -30,12 +30,22 @@
   onMount(async () => {
     try {
       const apiUrl = await resolveApiUrl()
-      const res = await fetch(`${apiUrl}/api/nostr/admin/captain_info`)
+      if (await isAstroportdApiUrl(apiUrl)) {
+        // astroportd : la clé du Capitaine est captainHEX dans GET /12345 (si un Capitaine est hébergé).
+        const res = await fetch(`${apiUrl}/12345`, {headers: {Accept: "application/json"}})
+        const data = res.ok ? await res.json() : null
 
-      if (res.ok) {
-        const data = await res.json()
-        if (data.captain_hex) {
-          builtByPubkey = data.captain_hex
+        if (/^[0-9a-f]{64}$/.test(data?.captainHEX || "")) {
+          builtByPubkey = data.captainHEX
+        }
+      } else {
+        const res = await fetch(`${apiUrl}/api/nostr/admin/captain_info`)
+
+        if (res.ok) {
+          const data = await res.json()
+          if (data.captain_hex) {
+            builtByPubkey = data.captain_hex
+          }
         }
       }
     } catch (err) {

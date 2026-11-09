@@ -27,6 +27,8 @@ import {
   presenceOf,
 } from "src/util/visio"
 import type {PresenceStatus, VisioInvite, VisioRoom} from "src/util/visio"
+import {resolveApiUrl, isAstroportdApiUrl} from "src/util/uplanet-detect"
+import {stationChatUrl} from "src/util/astroportd"
 
 const STORAGE_KEY = "uplanet.presence"
 const HEARTBEAT_MS = 4 * 60 * 1000
@@ -139,6 +141,21 @@ export const handleInviteText = (from: string, text: string, id?: string): boole
  * → ouverture de la salle. La sonnerie est un bonus : son échec ne bloque jamais l'appel.
  */
 export const callPerson = async (channelId: string, peer: string, label = "") => {
+  // Station astroportd : pas de salle vdo.ninja (/api/visio/room n'existe pas). La visio de la
+  // station (WebRTC, signalisation par la station) se lance depuis sa conversation avec l'ami.
+  const stationApi = await resolveApiUrl()
+
+  if (await isAstroportdApiUrl(stationApi)) {
+    const url = stationChatUrl(stationApi, peer)
+
+    if (!url) throw new Error("invalid peer")
+    if (!window.open(url, "_blank", "noopener,noreferrer")) {
+      throw new Error(`popup blocked — open ${url} to call from your station`)
+    }
+
+    return "station"
+  }
+
   const room = await createVisioRoom()
   const text = encodeInvite(room, pubkey.get())
   let rang = false

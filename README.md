@@ -106,7 +106,7 @@ pnpm run build:android --keystorepath <path> --keystorepass <password> --keystor
 2. Strips the service worker, which is incompatible with content-addressed IPFS URLs (and unregisters any previously-installed one for visitors upgrading from an older build).
 3. Builds the signed Android release APK (skipped automatically without `android/key.properties`, or via `--skip-apk`) and bundles it with `www/` into `dist/www/`, published under the same CID as the app.
 4. Publishes `dist/` to IPFS with `ipfs add -rw --pin`.
-5. Repoints `coracle.astroport.one`'s DNSLink at the new root CID via Astroport.ONE's `ovh.me.sh` (skipped automatically without OVH credentials, or via `--skip-dns`).
+5. Repoints `coracle.astroport.one`'s DNSLink at the new root CID via `ovh-me` (plugin dnslink d'astroportd-plugins) (skipped automatically without OVH credentials, or via `--skip-dns`).
 
 # Customization
 

@@ -96,10 +96,6 @@
         <i class="fa fa-newspaper" />
         {$_("menu.blog")}
       </MenuMobileItem>
-      <MenuMobileItem disabled={!$signer} href="/vocaux" on:click={closeMenu}>
-        <i class="fa fa-microphone" />
-        {$_("menu.vocaux")}
-      </MenuMobileItem>
       <MenuMobileItem disabled={!$signer} href="/channels" on:click={closeMenu}>
         <i class="fa fa-message" />
         <div class="relative inline-block">

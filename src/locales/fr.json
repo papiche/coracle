@@ -31,7 +31,6 @@
     "groups": "Groupes",
     "video": "Video",
     "blog": "Blog",
-    "vocaux": "Vocaux",
     "lists": "Listes",
     "settings": "Parametres",
     "about": "A propos",
@@ -305,7 +304,10 @@
     "send": "Envoyer",
     "sent": "Merci ! Votre retour a ete envoye.",
     "failed": "Echec de l'envoi. Veuillez reessayer plus tard.",
-    "missingFields": "Merci de remplir le titre et la description."
+    "missingFields": "Merci de remplir le titre et la description.",
+    "shareIdentity": "Joindre ma clé publique au rapport (facultatif)",
+    "authRequired": "Connexion requise : utilisez un compte hébergé par cette station.",
+    "rateLimited": "Trop de retours pour l'instant, réessayez plus tard."
   },
   "userData": {
     "title": "Donnees",
@@ -659,33 +661,6 @@
     "episodes": "episodes",
     "genreOther": "Autre",
     "deleteBlockedByEngagement": "Suppression impossible : quelqu'un a déjà répondu, réagi ou zappé cette vidéo"
-  },
-  "vocaux": {
-    "title": "Vocaux — Messages vocaux",
-    "loginRequired": "Connectez-vous pour ecouter et enregistrer des messages vocaux.",
-    "newMessage": "Nouveau message vocal",
-    "newReply": "Repondre en vocal",
-    "empty": "Aucun message vocal pour l'instant.",
-    "emptyScope": "Aucun message vocal geolocalise ici pour l'instant.",
-    "scopeAll": "Tout le monde",
-    "scopeUmap": "UMAP",
-    "scopeSector": "Secteur",
-    "scopeRegion": "Region",
-    "tapToRecord": "Appuyez pour enregistrer",
-    "micDenied": "Acces au microphone refuse",
-    "rerecord": "Recommencer",
-    "messageTitle": "Titre",
-    "titlePlaceholder": "Un mot pour ce message…",
-    "titleRequired": "Un titre est requis",
-    "description": "Description (optionnel)",
-    "private": "Message prive (chiffre)",
-    "recipientRequired": "Choisissez un destinataire",
-    "geolocate": "Ajouter la position (UMAP)",
-    "locationFailed": "Impossible d'obtenir la position",
-    "publish": "Publier",
-    "publishing": "Publication…",
-    "published": "Message vocal publie !",
-    "publishFailed": "Echec de la publication"
   },
   "blog": {
     "write": "Écrire",

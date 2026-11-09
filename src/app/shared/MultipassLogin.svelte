@@ -25,6 +25,7 @@
     type ConstellationStation,
     type MultipassResult,
   } from "src/util/multipass"
+  import {knownAstroportd} from "src/util/astroportd"
   import {getIpfsGateway} from "src/util/ipfs"
   import logger from "src/util/logger"
   import {boot} from "src/app/state"
@@ -230,6 +231,9 @@
         if (err.code === "MULTIPASS_EXISTS") {
           step = "need-pin"
           errorMessage = errorMessageFor(err.code)
+        } else if (knownAstroportd(selectedStation.uSPOT) === true) {
+          // Station astroportd : verrous et limites sont côté serveur, on affiche sa réponse.
+          errorMessage = err.message || errorMessageFor(err.code)
         } else if (err.code === "INVALID_PASS") {
           passAttempts += 1
           // UPassport compte aussi les échecs (toutes sessions confondues)

@@ -28,7 +28,7 @@
     type ZenReceivability,
     type UdriveStats,
   } from "src/util/zen"
-  import {getApiUrl} from "src/util/uplanet-detect"
+  import {getApiUrl, resolveApiUrl, isAstroportdApiUrl} from "src/util/uplanet-detect"
   import Popover from "src/partials/Popover.svelte"
   import Link from "src/partials/Link.svelte"
 
@@ -44,6 +44,13 @@
   let sharesData: ZenCardShares | null = null
   let udriveStats: UdriveStats | null = null
   let udriveLoading = false
+  // Station astroportd : pas de ZenCard, donc pas de lien /check_zencard.
+  let astroportd = false
+
+  resolveApiUrl()
+    .then(isAstroportdApiUrl)
+    .then(v => (astroportd = v))
+    .catch(() => {})
 
   // Extract identities from profile
   $: {
@@ -305,7 +312,7 @@
           </div>
         </div>
 
-        {#if identities.email}
+        {#if identities.email && !astroportd}
           <Link
             external
             class="mt-3 block text-xs text-accent underline"

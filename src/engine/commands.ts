@@ -53,7 +53,7 @@ import {
 import {stripExifData} from "src/util/html"
 import {appDataKeys} from "src/util/nostr"
 import {ensureProto} from "src/util/misc"
-import {getVerifiedUPlanet} from "src/util/uplanet-detect"
+import {getVerifiedUPlanet, getUploadHeaders} from "src/util/uplanet-detect"
 import {get} from "svelte/store"
 
 // Helpers
@@ -120,7 +120,11 @@ export const uploadImage = async (file: File): Promise<string> => {
     }
     formData.append("type", "media")
     try {
-      const res = await fetch(up.uploadUrl, {method: "POST", body: formData})
+      const res = await fetch(up.uploadUrl, {
+        method: "POST",
+        headers: await getUploadHeaders(up),
+        body: formData,
+      })
       if (res.ok) {
         const data = await res.json()
         if (data.url) return data.url
@@ -326,7 +330,14 @@ export const sendMessage = (channelId: string, content: string, delay: number) =
 // NIP-44 encrypted directly, matching Astroport.ONE/tools/nostr_node_intercom.py.
 export const sendEncryptedImageDM = async (
   recipient: string,
-  envelope: {cid: string; encKey: string; iv: string; filename: string; hint?: string},
+  envelope: {
+    cid: string
+    encKey: string
+    iv: string
+    filename: string
+    hint?: string
+    gw?: string[]
+  },
 ) => {
   const content = JSON.stringify({
     _uenc_img: {
@@ -335,6 +346,7 @@ export const sendEncryptedImageDM = async (
       iv: envelope.iv,
       filename: envelope.filename,
       hint: envelope.hint || "",
+      ...(envelope.gw?.length ? {gw: envelope.gw} : {}),
     },
   })
 

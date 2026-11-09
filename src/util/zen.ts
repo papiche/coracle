@@ -1,7 +1,8 @@
 import {writable} from "svelte/store"
 import logger from "src/util/logger"
 import {getIpfsGateway} from "src/util/ipfs"
-import {resolveApiUrl} from "src/util/uplanet-detect"
+import {resolveApiUrl, isAstroportdApiUrl} from "src/util/uplanet-detect"
+import {zenFromCents} from "src/util/astroportd"
 
 /**
  * ZEN Balance Service
@@ -110,7 +111,9 @@ export async function checkZenBalance(address: string): Promise<ZenBalance | nul
 
     if (data.balance && data.g1pub) {
       const g1Balance = parseFloat(data.balance)
-      const zenBalance = Math.floor((g1Balance - 1) * 10)
+      // astroportd rend zen_cents (entiers, réserve de 1 Ğ1 déjà retirée) : pas de flottant pour
+      // la monnaie. Sans ce champ (UPassport), calcul historique.
+      const zenBalance = zenFromCents(data.zen_cents) ?? Math.floor((g1Balance - 1) * 10)
 
       return {
         g1Balance,
@@ -332,6 +335,10 @@ export async function checkZenCardShares(email: string): Promise<ZenCardShares |
 
   try {
     const apiUrl = await resolveApiUrl()
+
+    // La ZenCard n'existe pas dans astroportd (ni la route) : rien à afficher.
+    if (await isAstroportdApiUrl(apiUrl)) return null
+
     const response = await fetch(`${apiUrl}/check_zencard?email=${encodeURIComponent(email)}`, {
       method: "GET",
       headers: {Accept: "application/json"},

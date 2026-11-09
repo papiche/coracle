@@ -3,6 +3,16 @@
 // zelkova's multipass_service.dart create/restore logic).
 import logger from "src/util/logger"
 import {detectUPlanetServices, isPrivateIP} from "src/util/uplanet-detect"
+import {
+  followsLegacyApiConvention,
+  knownAstroportd,
+  probeAstroportd,
+  unlockBody,
+  keysBody,
+  basicHeader,
+  mapUnlockError,
+  fromUnlockAndKeys,
+} from "src/util/astroportd"
 
 export interface ConstellationStation {
   uSPOT: string
@@ -34,11 +44,13 @@ export interface MultipassResult {
   npub: string
   hex: string
   pass: string
-  ssss: string
-  g1pub: string
+  // Absents des réponses d'une station astroportd (jamais fabriqués) ; aucun consommateur.
+  ssss?: string
+  // Absent après une récupération par PASS sur astroportd (unlock + keys ne le rendent pas).
+  g1pub?: string
   nostrns?: string
-  salt: string
-  pepper: string
+  salt?: string
+  pepper?: string
   is_origin?: boolean
   uplanet_home?: string
 }
@@ -216,8 +228,30 @@ export async function createOrRestoreMultipass(
     lat,
     lon,
     passCode,
-  }: {email: string; lang: string; lat?: string; lon?: string; passCode?: string},
+  }: {
+    email: string
+    lang: string
+    lat?: string
+    lon?: string
+    passCode?: string
+  },
 ): Promise<MultipassResult> {
+  // Sonde /12345 seulement pour une URL qui ne suit pas la convention historique (u.<domaine>, :54321).
+  const cleanStation = stationUrl.replace(/\/$/, "")
+  const isAstroportd =
+    knownAstroportd(cleanStation) ??
+    (!followsLegacyApiConvention(cleanStation) && (await probeAstroportd(cleanStation)))
+
+  if (isAstroportd) {
+    // Coracle ne crée jamais de compte : sans PASS, on le demande (équivalent du 409
+    // MULTIPASS_EXISTS historique) ; l'e-mail inconnu se révèle par l'erreur serveur de l'unlock.
+    if (!passCode) {
+      throw new MultipassError("MULTIPASS_EXISTS", ERROR_MESSAGES.MULTIPASS_EXISTS)
+    }
+
+    return unlockAndExportOnAstroportd(cleanStation, email, passCode)
+  }
+
   const form = new FormData()
   form.set("email", email.trim())
   form.set("lang", LANG_2LETTER.test(lang) ? lang : "fr")
@@ -264,6 +298,68 @@ export async function createOrRestoreMultipass(
     data?.detail || data?.message || ERROR_MESSAGES[code],
     data?.locked === true,
   )
+}
+
+/**
+ * Récupération par email + PASS sur astroportd, en deux appels : POST /api/v1/account/unlock
+ * {email, pass} (public) rend un jeton ; POST /api/v1/account/keys {confirm:true} authentifié
+ * en Basic email:jeton rend nsec/npub. Aucun secret n'est journalisé ni conservé ici.
+ */
+async function unlockAndExportOnAstroportd(
+  cleanUrl: string,
+  email: string,
+  passCode: string,
+): Promise<MultipassResult> {
+  const post = async (path: string, body: unknown, auth?: string) => {
+    let res: Response
+    try {
+      res = await fetch(`${cleanUrl}${path}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json", ...(auth ? {Authorization: auth} : {})},
+        body: JSON.stringify(body),
+      })
+    } catch (err) {
+      throw new MultipassError(
+        "NETWORK_ERROR",
+        `Could not reach ${cleanUrl}: ${err instanceof Error ? err.message : String(err)}`,
+      )
+    }
+
+    let data: any = null
+    try {
+      data = await res.json()
+    } catch {
+      // corps non JSON
+    }
+
+    if (!res.ok) {
+      const mapped = mapUnlockError(data)
+      throw new MultipassError(
+        mapped.code,
+        mapped.message || ERROR_MESSAGES[mapped.code],
+        mapped.locked,
+      )
+    }
+
+    return data
+  }
+
+  const unlocked = await post("/api/v1/account/unlock", unlockBody(email, passCode))
+
+  if (typeof unlocked?.token !== "string" || typeof unlocked?.email !== "string") {
+    throw new MultipassError("UNKNOWN", "Unexpected response from this station.")
+  }
+
+  const keys = await post(
+    "/api/v1/account/keys",
+    keysBody(),
+    basicHeader(unlocked.email, unlocked.token),
+  )
+  const result = fromUnlockAndKeys(unlocked, keys, passCode)
+
+  if (!result) throw new MultipassError("UNKNOWN", "Unexpected response from this station.")
+
+  return result as MultipassResult
 }
 
 /**

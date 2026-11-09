@@ -4,9 +4,17 @@
 // key, distinguished only by the envelope's "channel" field — see
 // Astroport.ONE/docs/reference/IDENTITY_MULTIPASS.md.
 
-import {bytesToHex, hexToBytes} from "@welshman/lib"
+import {bytesToHex} from "@welshman/lib"
 import {getIpfsGateway} from "src/util/ipfs"
+import {nip98Header} from "src/util/nip98"
 import {getVerifiedUPlanet} from "src/util/uplanet-detect"
+import {
+  decryptUenc,
+  encryptUenc,
+  gatewayCandidates,
+  gatewayOrigin,
+  rawCidMatches,
+} from "src/util/uenc"
 
 export type UplanetEnvelope = {
   channel: string
@@ -53,6 +61,8 @@ export type UencImgEnvelope = {
   iv: string
   filename: string
   hint?: string
+  /** Passerelles où le chiffré se trouve (adresses de stations) ; facultatif, ignoré des anciens clients. */
+  gw?: string[]
 }
 
 export const parseUencImgEnvelope = (content: string): UencImgEnvelope | null => {
@@ -67,6 +77,7 @@ export const parseUencImgEnvelope = (content: string): UencImgEnvelope | null =>
         iv: img.iv || "",
         filename: img.filename || "image.jpg",
         hint: img.hint || "",
+        gw: Array.isArray(img.gw) ? img.gw.map(gatewayOrigin).filter(Boolean) : undefined,
       }
     }
   } catch (err) {
@@ -81,6 +92,10 @@ export const uploadEncryptedImage = async (file: File): Promise<UencImgEnvelope>
   const up = getVerifiedUPlanet()
   if (!up)
     throw new Error("UPlanet API unavailable — encrypted DM images require a UPlanet gateway")
+
+  // Station astroportd : le fichier est chiffré ICI (la station ne reçoit que des octets illisibles et ne connaît
+  // pas la clé), puis déposé comme pièce jointe, adressée par son contenu (CID).
+  if (up.astroportd) return uploadToAstroportd(up.apiUrl, file)
 
   const encKey = bytesToHex(crypto.getRandomValues(new Uint8Array(32)))
 
@@ -103,7 +118,33 @@ export const uploadEncryptedImage = async (file: File): Promise<UencImgEnvelope>
   }
 }
 
-const UENC_MAGIC = "UENC"
+const uploadToAstroportd = async (apiUrl: string, file: File): Promise<UencImgEnvelope> => {
+  const {payload, keyHex, ivHex} = await encryptUenc(await file.arrayBuffer())
+  const url = `${apiUrl.replace(/\/$/, "")}/api/v1/attachments?days=30`
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/octet-stream",
+      Authorization: await nip98Header(url, "POST"),
+    },
+    body: payload,
+  })
+  const data = await res.json().catch(() => null)
+
+  if (!res.ok || !data?.cid) {
+    throw new Error(
+      `Encrypted upload failed: ${data?.error || data?.message || `HTTP ${res.status}`}`,
+    )
+  }
+
+  return {
+    cid: data.cid,
+    encKey: keyHex,
+    iv: ivHex,
+    filename: file.name,
+    gw: [data.gateway].filter(Boolean),
+  }
+}
 
 const guessImageMime = (filename: string) => {
   const ext = filename.split(".").pop()?.toLowerCase()
@@ -114,27 +155,40 @@ const guessImageMime = (filename: string) => {
 }
 
 /**
- * Fetch + decrypt a _uenc_img from IPFS. Returns an object URL for <img src>.
- * The IV is read from the UENC file header (bytes 6-18), not from the JSON
- * envelope's "iv" field — matching bro_dm_daemon.sh, which does the same.
+ * Fetch + decrypt a _uenc_img. Returns an object URL for <img src>.
+ * Les passerelles du message sont essayées d'abord, puis celle de l'application : l'adresse est un contenu (CID), pas une
+ * machine. Pour un CIDv1 raw, les octets reçus sont vérifiés contre le CID avant tout déchiffrement. Les requêtes
+ * n'envoient ni cookie ni référent.
  */
 export const decryptUencImage = async (envelope: UencImgEnvelope): Promise<string> => {
-  const res = await fetch(`${getIpfsGateway()}/ipfs/${envelope.cid}`)
-  if (!res.ok) throw new Error(`IPFS fetch failed: HTTP ${res.status}`)
+  let failure = "no gateway"
 
-  const bytes = new Uint8Array(await res.arrayBuffer())
-  const magic = new TextDecoder().decode(bytes.slice(0, 4))
+  for (const gw of gatewayCandidates(envelope.gw, getIpfsGateway())) {
+    try {
+      const res = await fetch(`${gw}/ipfs/${encodeURIComponent(envelope.cid)}`, {
+        credentials: "omit",
+        referrerPolicy: "no-referrer",
+      })
 
-  if (bytes.length < 18 || magic !== UENC_MAGIC) {
-    throw new Error("Invalid UENC payload")
+      if (!res.ok) {
+        failure = `HTTP ${res.status}`
+        continue
+      }
+
+      const bytes = new Uint8Array(await res.arrayBuffer())
+
+      if ((await rawCidMatches(envelope.cid, bytes)) === false) {
+        failure = "content does not match its CID"
+        continue
+      }
+
+      const plaintext = await decryptUenc(bytes, envelope.encKey)
+
+      return URL.createObjectURL(new Blob([plaintext], {type: guessImageMime(envelope.filename)}))
+    } catch (err: any) {
+      failure = err?.message || String(err)
+    }
   }
 
-  const iv = bytes.slice(6, 18)
-  const ciphertext = bytes.slice(18)
-  const key = await crypto.subtle.importKey("raw", hexToBytes(envelope.encKey), "AES-GCM", false, [
-    "decrypt",
-  ])
-  const plaintext = await crypto.subtle.decrypt({name: "AES-GCM", iv}, key, ciphertext)
-
-  return URL.createObjectURL(new Blob([plaintext], {type: guessImageMime(envelope.filename)}))
+  throw new Error(`IPFS fetch failed: ${failure}`)
 }

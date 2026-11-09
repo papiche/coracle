@@ -8,7 +8,7 @@
   import Button from "src/partials/Button.svelte"
   import {showWarning} from "src/partials/Toast.svelte"
   import {ensureProto} from "src/util/misc"
-  import {getVerifiedUPlanet} from "src/util/uplanet-detect"
+  import {getVerifiedUPlanet, getUploadHeaders} from "src/util/uplanet-detect"
   import type {CompressorOpts} from "src/util/html"
   import {listenForFile} from "src/util/html"
   import {env, uploadFile} from "src/engine"
@@ -30,7 +30,11 @@
       try {
         const formData = new FormData()
         formData.append("file", file)
-        const res = await fetch(up.uploadUrl, {method: "POST", body: formData})
+        const res = await fetch(up.uploadUrl, {
+          method: "POST",
+          headers: await getUploadHeaders(up),
+          body: formData,
+        })
         if (res.ok) {
           const data = await res.json()
           if (data.url) return data.url

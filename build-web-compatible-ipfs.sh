@@ -22,12 +22,21 @@
 #      release keystore isn't set up (--skip-apk to force).
 #   5. Publishes dist/ to IPFS via `ipfs add -rw`
 #   6. Repoints coracle.astroport.one's DNSLink at the new root CID via
-#      ovh.me.sh (Astroport.ONE) — skipped automatically if that script or
+#      ovh-me (plugin dnslink d'astroportd-plugins ; --coop=NOM pour choisir la coopérative) — skipped automatically if that script or
 #      its OVH credentials aren't available (--skip-dns to force).
 #   7. Prints the gateway URL
 ##############################################################################
 
 set -e
+
+# ovh-me : script de référence du plugin « dnslink » (astroportd-plugins) — aucune copie dans ce projet
+_find_ovh_me() {
+  command -v ovh-me 2>/dev/null && return
+  for c in "${OVH_ME:-}" "$(dirname "$0")/../astroportd-plugins/dnslink/bin/ovh_me.py" "$HOME/workspace/AAA/astroportd-plugins/dnslink/bin/ovh_me.py"; do
+    [ -n "$c" ] && [ -x "$c" ] && { echo "$c"; return; }
+  done
+  return 1
+}
 
 MY_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -38,6 +47,7 @@ for arg in "${@:2}"; do
   case "$arg" in
     --skip-apk) SKIP_APK="yes" ;;
     --skip-dns) SKIP_DNS="yes" ;;
+    --coop=*)   COOP="${arg#--coop=}" ;;   # coopérative (astroportd multi-plans) ; sinon menu / OVH_COOP
   esac
 done
 
@@ -175,29 +185,22 @@ ROOT_CID=$(echo "$IPFS_OUTPUT" | tail -1 | awk '{print $2}')
 DNS_STATUS="skipped"
 if [ "$SKIP_DNS" = "no" ]; then
   echo "--- Updating DNSLink (coracle.astroport.one) ---"
-  OVH_SCRIPT="${MY_PATH}/../Astroport.ONE/admin/system/ovh.me.sh"
-  [ -f "$OVH_SCRIPT" ] || OVH_SCRIPT="${HOME}/.zen/Astroport.ONE/admin/system/ovh.me.sh"
-  [ -f "$OVH_SCRIPT" ] || OVH_SCRIPT="${HOME}/workspace/AAA/Astroport.ONE/admin/system/ovh.me.sh"
-  if [ -f "$OVH_SCRIPT" ]; then
-    if bash "$OVH_SCRIPT" upsert coracle "$ROOT_CID" astroport.one; then
+  OVH_ME_BIN="$(_find_ovh_me || true)"
+  if [ -n "$OVH_ME_BIN" ]; then
+    if "$OVH_ME_BIN" ${COOP:+--coop "$COOP"} upsert coracle "$ROOT_CID" "${OVH_ZONE:-}"; then
       DNS_STATUS="updated"
     else
       DNS_STATUS="failed (see warnings above — update manually if needed)"
     fi
   else
-    echo "WARNING: ovh.me.sh not found — update DNSLink manually:"
-    echo "  ovh.me.sh upsert coracle $ROOT_CID astroport.one"
-    DNS_STATUS="ovh.me.sh not found"
+    echo "WARNING: ovh-me introuvable (plugin dnslink d'astroportd-plugins : ./install.sh) — update DNSLink manually:"
+    echo "  ovh-me upsert coracle $ROOT_CID"
+    DNS_STATUS="ovh-me not found"
   fi
 else
   echo "--- Skipping DNSLink update (--skip-dns) ---"
 fi
 
-echo ""
-echo "=== Published to IPFS ==="
-echo "CID:  $ROOT_CID"
-echo "URL:  ${GATEWAY}/ipfs/${ROOT_CID}/"
-echo "APK:  ${GATEWAY}/ipfs/${ROOT_CID}/www/ → ${APK_PAGE_STATUS}"
 echo "DNS:  coracle.astroport.one → ${DNS_STATUS}"
 echo ""
 echo "$IPFS_OUTPUT"

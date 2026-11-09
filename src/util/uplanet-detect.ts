@@ -11,12 +11,23 @@ import {Capacitor} from "@capacitor/core"
 import {synced, localStorageProvider} from "@welshman/store"
 import {pubkey, deriveProfile, getProfile} from "@welshman/app"
 import logger from "src/util/logger"
+import {
+  sameHostApiUrl,
+  followsLegacyApiConvention,
+  probeAstroportd,
+  knownAstroportd,
+  uploadAuthHeaders,
+} from "src/util/astroportd"
 
 export interface UPlanetServices {
   relayUrl: string
   apiUrl: string
   uploadUrl: string
   isLocal: boolean
+  // Station astroportd « même hôte » confirmée par GET /12345 (_source:"astroportd").
+  // Absent pour toutes les stations historiques. uploadUrl n'y existe pas côté serveur
+  // (404) : les envois retombent alors sur Blossom.
+  astroportd?: boolean
 }
 
 export type ApiUrlSource = "preferred" | "home" | "detected" | "default"
@@ -96,6 +107,40 @@ export const servicesFromRelayUrl = (relayUrl: string): UPlanetServices | null =
 
   return null
 }
+
+// Stations astroportd « même hôte » confirmées, par URL de relai (cache rempli par
+// probeSameHostStation, lu de façon synchrone par servicesFromPreferredRelay).
+const _sameHost = new Map<string, UPlanetServices>()
+
+/**
+ * Pour un relai qui ne suit PAS la convention historique : essaie le même hôte comme API et
+ * vérifie par GET /12345 (_source:"astroportd"). Ne sonde que le relai choisi par l'utilisateur
+ * ("Vos relais"), jamais un hôte arbitraire. Les relais conventionnels ne déclenchent aucune requête.
+ */
+export const probeSameHostStation = async (relayUrl: string): Promise<UPlanetServices | null> => {
+  if (servicesFromRelayUrl(relayUrl)) return null
+  if (_sameHost.has(relayUrl)) return _sameHost.get(relayUrl)!
+
+  const apiUrl = sameHostApiUrl(relayUrl)
+  if (!apiUrl || followsLegacyApiConvention(apiUrl)) return null
+  if (!(await probeAstroportd(apiUrl))) return null
+
+  const services: UPlanetServices = {
+    relayUrl,
+    apiUrl,
+    uploadUrl: `${apiUrl}/api/upload/image`,
+    isLocal: isPrivateIP(new URL(apiUrl).hostname),
+    astroportd: true,
+  }
+
+  _sameHost.set(relayUrl, services)
+
+  return services
+}
+
+/** Convention historique d'abord (comportement inchangé), puis station astroportd déjà confirmée. */
+const servicesFromPreferredRelay = (relayUrl: string): UPlanetServices | null =>
+  servicesFromRelayUrl(relayUrl) || _sameHost.get(relayUrl) || null
 
 /**
  * Derive {relayUrl, apiUrl, uploadUrl, isLocal} from an IPFS gateway URL
@@ -248,6 +293,22 @@ export async function verifyUPlanetServices(services: UPlanetServices): Promise<
   return false
 }
 
+/**
+ * L'API à cette URL est-elle une station astroportd ? Verdict en cache, sinon sonde /12345 — mais
+ * jamais pour une URL qui suit la convention historique (u.<domaine>, :54321) : zéro requête en plus.
+ */
+export const isAstroportdApiUrl = async (apiUrl: string): Promise<boolean> =>
+  knownAstroportd(apiUrl) ?? (!followsLegacyApiConvention(apiUrl) && (await probeAstroportd(apiUrl)))
+
+/** En-têtes d'un POST vers `services.uploadUrl` : {} (historique) ou NIP-98 (astroportd). */
+export const getUploadHeaders = async (services: UPlanetServices) =>
+  uploadAuthHeaders(services, async (url, method) => {
+    // Import tardif : nip98 dépend de l'état du moteur, qui dépend de ce module.
+    const {nip98Header} = await import("src/util/nip98")
+
+    return nip98Header(url, method)
+  })
+
 export function getVerifiedUPlanet(): UPlanetServices | null {
   return _verified
 }
@@ -263,8 +324,14 @@ export function initUPlanetServices(): void {
 
   const check = () => {
     const preferred = get(preferredRelayUrl)
+    if (preferred && !servicesFromRelayUrl(preferred) && !_sameHost.has(preferred)) {
+      probeSameHostStation(preferred).then(found => {
+        if (found && get(preferredRelayUrl) === preferred) check()
+      })
+    }
+
     const services =
-      (preferred && servicesFromRelayUrl(preferred)) ||
+      (preferred && servicesFromPreferredRelay(preferred)) ||
       getHomeStationServices() ||
       detectUPlanetServices()
 
@@ -340,7 +407,7 @@ export function getApiUrlWithSource(): {url: string; source: ApiUrlSource} {
   const preferred = get(preferredRelayUrl)
 
   if (preferred) {
-    const services = servicesFromRelayUrl(preferred)
+    const services = servicesFromPreferredRelay(preferred)
     if (services) return {url: services.apiUrl, source: "preferred"}
   }
 
@@ -365,7 +432,7 @@ export async function resolveApiUrl(): Promise<string> {
   const preferred = get(preferredRelayUrl)
 
   if (preferred) {
-    const services = servicesFromRelayUrl(preferred)
+    const services = servicesFromRelayUrl(preferred) || (await probeSameHostStation(preferred))
     if (services) return services.apiUrl
   }
 

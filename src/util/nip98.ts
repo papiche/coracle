@@ -3,8 +3,7 @@
  *
  * Une seule signature, sans état, valable sur n'importe quelle station : c'est ce qui
  * permet le roaming sans la danse NIP-42 (défi → kind 22242 publié sur le relais →
- * marqueur d'1 h) de `authenticateForUpload` (vocals.ts), qui reste pour les routes
- * historiques (/api/fileupload…).
+ * marqueur d'1 h) historique (/api/fileupload…, retirée avec les vocaux).
  *
  * L'événement lie la méthode et l'URL de la requête (le serveur compare méthode et chemin)
  * et porte un `nonce` aléatoire : même route, même seconde, deux signatures distinctes.

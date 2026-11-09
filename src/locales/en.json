@@ -31,7 +31,6 @@
     "groups": "Groups",
     "video": "Video",
     "blog": "Blog",
-    "vocaux": "Vocaux",
     "lists": "Lists",
     "settings": "Settings",
     "about": "About",
@@ -305,7 +304,10 @@
     "send": "Send",
     "sent": "Thanks! Your feedback was sent.",
     "failed": "Failed to send feedback. Please try again later.",
-    "missingFields": "Please fill in both the title and description."
+    "missingFields": "Please fill in both the title and description.",
+    "shareIdentity": "Attach my public key to the report (optional)",
+    "authRequired": "Sign-in required: use an account hosted on this station.",
+    "rateLimited": "Too many reports for now, please try again later."
   },
   "userData": {
     "title": "Data",
@@ -659,33 +661,6 @@
     "episodes": "episodes",
     "genreOther": "Other",
     "deleteBlockedByEngagement": "Can't delete: someone has already replied, reacted, or zapped this video"
-  },
-  "vocaux": {
-    "title": "Vocaux — Voice Messages",
-    "loginRequired": "Log in to listen to and record voice messages.",
-    "newMessage": "New voice message",
-    "newReply": "Reply with a voice message",
-    "empty": "No voice messages yet.",
-    "emptyScope": "No geolocated voice messages here yet.",
-    "scopeAll": "Everyone",
-    "scopeUmap": "UMAP",
-    "scopeSector": "Sector",
-    "scopeRegion": "Region",
-    "tapToRecord": "Tap to record",
-    "micDenied": "Microphone access denied",
-    "rerecord": "Re-record",
-    "messageTitle": "Title",
-    "titlePlaceholder": "A word for this message…",
-    "titleRequired": "A title is required",
-    "description": "Description (optional)",
-    "private": "Private message (encrypted)",
-    "recipientRequired": "Choose a recipient",
-    "geolocate": "Add location (UMAP)",
-    "locationFailed": "Could not get your location",
-    "publish": "Publish",
-    "publishing": "Publishing…",
-    "published": "Voice message published!",
-    "publishFailed": "Failed to publish"
   },
   "blog": {
     "write": "Write",

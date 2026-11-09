@@ -10,7 +10,7 @@ import {pubkey, profileSearch, userBlossomServerList} from "@welshman/app"
 import {npubEncode} from "nostr-tools/nip19"
 import {Editor, MentionSuggestion, WelshmanExtension, editorProps} from "@welshman/editor"
 import {ensureProto} from "src/util/misc"
-import {getVerifiedUPlanet} from "src/util/uplanet-detect"
+import {getVerifiedUPlanet, getUploadHeaders} from "src/util/uplanet-detect"
 import {env} from "src/engine/state"
 import {uploadFile} from "src/engine/commands"
 import type {UdriveFile} from "src/util/zen"
@@ -93,7 +93,11 @@ export const makeEditor = ({
                       }
                     }
                     formData.append("type", "media")
-                    const res = await fetch(up.uploadUrl, {method: "POST", body: formData})
+                    const res = await fetch(up.uploadUrl, {
+                      method: "POST",
+                      headers: await getUploadHeaders(up),
+                      body: formData,
+                    })
                     if (res.ok) {
                       const data = await res.json()
                       if (data.url) return {result: {url: data.url, tags: []}}
