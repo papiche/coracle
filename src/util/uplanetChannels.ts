@@ -53,7 +53,7 @@ export const displayUplanetPayload = (payload: Record<string, any>) =>
 // and atomic_chat.html/Zelkova: the plaintext DM content (itself NIP-44/04
 // encrypted end-to-end) is a JSON object {"_uenc_img": {cid, enc_key, iv, filename, hint}}.
 // The file itself sits on IPFS pre-encrypted with AES-256-GCM by UPassport's
-// /api/fileupload/encrypted (UENC format: magic"UENC"(4) + version(1) + enc_type(1) + iv(12) + ciphertext+tag).
+// /api/fileupload/encrypted (UENC v2: magic "UENC"(4) + version(1) + enc_type(1) + chunk_log2(1) + nonce prefix(7), then 64 KiB sealed chunks).
 
 export type UencImgEnvelope = {
   cid: string

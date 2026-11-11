@@ -1,41 +1,85 @@
 /**
- * uenc.ts — pièces jointes chiffrées des messages privés (format UENC v1, partagé avec
- * Astroport.ONE/tools/uenc_codec.py et zelkova) : `UENC` + version(1) + type(1) + IV(12) + chiffré+étiquette,
- * AES-256-GCM. Le chiffrement se fait ICI : la station ne reçoit que des octets illisibles et ne connaît pas la clé.
+ * uenc.ts — pièces jointes chiffrées des messages privés (format UENC v2, STREAM, partagé avec
+ * astroportd `crates/astro-crypto/src/uenc/v2.rs` et Astroport.ONE/tools/uenc_codec.py) :
+ * en-tête de 14 octets `UENC` + version(1 = 2) + type(1) + chunk_log2(1) + préfixe de nonce(7), puis des blocs de
+ * 64 Kio de clair chiffrés + étiquette(16), AES-256-GCM. Nonce de chaque bloc = préfixe + indice (u32 BE) +
+ * drapeau « dernier bloc » ; l'en-tête complet est la donnée associée (AAD), donc réordonner ou tronquer échoue.
+ * Le chiffrement se fait ICI : la station ne reçoit que des octets illisibles et ne connaît pas la clé.
+ * L'ancien format v1 n'est plus lu ni écrit.
  */
 import {bytesToHex, hexToBytes} from "@welshman/lib"
 
 const MAGIC = [0x55, 0x45, 0x4e, 0x43] // "UENC"
-const VERSION = 1
+const VERSION = 2
 const AES256GCM = 1
-const HEADER = 6
-const IV_LEN = 12
+const CHUNK_LOG2 = 16
+const HEADER = 14
+const PREFIX_LEN = 7
+const TAG_LEN = 16
+const MIN_CHUNK_LOG2 = 12
+const MAX_CHUNK_LOG2 = 24
 
 export type EncryptedAttachment = {payload: Uint8Array; keyHex: string; ivHex: string}
 
-export const encryptUenc = async (data: ArrayBuffer): Promise<EncryptedAttachment> => {
-  const raw = crypto.getRandomValues(new Uint8Array(32))
-  const iv = crypto.getRandomValues(new Uint8Array(IV_LEN))
-  const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt"])
-  const sealed = new Uint8Array(await crypto.subtle.encrypt({name: "AES-GCM", iv}, key, data))
-  const payload = new Uint8Array(HEADER + IV_LEN + sealed.length)
+const nonce = (prefix: Uint8Array, index: number, last: boolean) => {
+  const n = new Uint8Array(12)
 
-  payload.set(MAGIC, 0)
-  payload[4] = VERSION
-  payload[5] = AES256GCM
-  payload.set(iv, HEADER)
-  payload.set(sealed, HEADER + IV_LEN)
+  n.set(prefix, 0)
+  new DataView(n.buffer).setUint32(PREFIX_LEN, index, false)
+  n[11] = last ? 1 : 0
 
-  return {payload, keyHex: bytesToHex(raw), ivHex: bytesToHex(iv)}
+  return n
 }
 
-/** L'IV est lu dans l'en-tête (comme bro_dm_daemon.sh), pas dans le message. */
+/** `ivHex` est le préfixe de nonce (7 octets), informatif : le déchiffrement le relit dans l'en-tête. */
+export const encryptUenc = async (data: ArrayBuffer): Promise<EncryptedAttachment> => {
+  const raw = crypto.getRandomValues(new Uint8Array(32))
+  const prefix = crypto.getRandomValues(new Uint8Array(PREFIX_LEN))
+  const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt"])
+  const header = new Uint8Array(HEADER)
+
+  header.set(MAGIC, 0)
+  header[4] = VERSION
+  header[5] = AES256GCM
+  header[6] = CHUNK_LOG2
+  header.set(prefix, 7)
+
+  const plain = new Uint8Array(data)
+  const size = 1 << CHUNK_LOG2
+  const count = Math.max(1, Math.ceil(plain.length / size)) // au moins un bloc, éventuellement vide
+  const parts: Uint8Array[] = [header]
+
+  for (let i = 0; i < count; i++) {
+    const sealed = await crypto.subtle.encrypt(
+      {name: "AES-GCM", iv: nonce(prefix, i, i === count - 1), additionalData: header, tagLength: 128},
+      key,
+      plain.subarray(i * size, (i + 1) * size),
+    )
+
+    parts.push(new Uint8Array(sealed))
+  }
+
+  const payload = new Uint8Array(parts.reduce((n, p) => n + p.length, 0))
+  let at = 0
+
+  for (const p of parts) {
+    payload.set(p, at)
+    at += p.length
+  }
+
+  return {payload, keyHex: bytesToHex(raw), ivHex: bytesToHex(prefix)}
+}
+
+/** Le préfixe de nonce est lu dans l'en-tête (comme uenc_codec.py), pas dans le message. AES-256-GCM seulement. */
 export const decryptUenc = async (bytes: Uint8Array, keyHex: string): Promise<ArrayBuffer> => {
+  const chunkLog2 = bytes[6]
+
   if (
-    bytes.length < HEADER + IV_LEN + 16 ||
+    bytes.length < HEADER + TAG_LEN ||
     !MAGIC.every((b, i) => bytes[i] === b) ||
     bytes[4] !== VERSION ||
-    bytes[5] !== AES256GCM
+    bytes[5] !== AES256GCM ||
+    !(chunkLog2 >= MIN_CHUNK_LOG2 && chunkLog2 <= MAX_CHUNK_LOG2)
   ) {
     throw new Error("Invalid UENC payload")
   }
@@ -43,12 +87,35 @@ export const decryptUenc = async (bytes: Uint8Array, keyHex: string): Promise<Ar
   const key = await crypto.subtle.importKey("raw", hexToBytes(keyHex), "AES-GCM", false, [
     "decrypt",
   ])
+  const header = bytes.slice(0, HEADER)
+  const prefix = header.slice(7, HEADER)
+  const sealedSize = (1 << chunkLog2) + TAG_LEN
+  const body = bytes.subarray(HEADER)
+  const count = Math.ceil(body.length / sealedSize)
 
-  return crypto.subtle.decrypt(
-    {name: "AES-GCM", iv: bytes.slice(HEADER, HEADER + IV_LEN)},
-    key,
-    bytes.slice(HEADER + IV_LEN),
-  )
+  if (body.length - (count - 1) * sealedSize < TAG_LEN) throw new Error("Invalid UENC payload")
+
+  const parts: Uint8Array[] = []
+
+  for (let i = 0; i < count; i++) {
+    const plain = await crypto.subtle.decrypt(
+      {name: "AES-GCM", iv: nonce(prefix, i, i === count - 1), additionalData: header, tagLength: 128},
+      key,
+      body.subarray(i * sealedSize, (i + 1) * sealedSize),
+    )
+
+    parts.push(new Uint8Array(plain))
+  }
+
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0))
+  let at = 0
+
+  for (const p of parts) {
+    out.set(p, at)
+    at += p.length
+  }
+
+  return out.buffer
 }
 
 const B32 = "abcdefghijklmnopqrstuvwxyz234567"

@@ -40,14 +40,14 @@ const cidOf = async (bytes: Uint8Array) =>
   )
 
 describe("uenc", () => {
-  it("chiffre au format UENC v1 et se déchiffre avec la clé seule", async () => {
+  it("chiffre au format UENC v2 et se déchiffre avec la clé seule", async () => {
     const data = new TextEncoder().encode("bonjour").buffer as ArrayBuffer
     const {payload, keyHex, ivHex} = await encryptUenc(data)
 
-    expect(Array.from(payload.slice(0, 6))).toEqual([0x55, 0x45, 0x4e, 0x43, 1, 1])
+    expect(Array.from(payload.slice(0, 7))).toEqual([0x55, 0x45, 0x4e, 0x43, 2, 1, 16])
     expect(keyHex).toMatch(/^[0-9a-f]{64}$/)
     expect(ivHex).toBe(
-      Array.from(payload.slice(6, 18), b => b.toString(16).padStart(2, "0")).join(""),
+      Array.from(payload.slice(7, 14), b => b.toString(16).padStart(2, "0")).join(""),
     )
     expect(new TextDecoder().decode(await decryptUenc(payload, keyHex))).toBe("bonjour")
     // jamais le clair dans les octets envoyés
@@ -65,6 +65,40 @@ describe("uenc", () => {
 
     bad[0] = 0x58
     await expect(decryptUenc(bad, keyHex)).rejects.toThrow("Invalid UENC")
+  })
+
+  it("chiffre en plusieurs blocs de 64 Kio et refuse une troncature ou un réordonnancement", async () => {
+    const data = Uint8Array.from({length: 70_000}, (_, i) => i % 251)
+    const {payload, keyHex} = await encryptUenc(data.buffer as ArrayBuffer)
+
+    expect(payload.length).toBe(14 + 70_000 + 2 * 16)
+    expect(new Uint8Array(await decryptUenc(payload, keyHex))).toEqual(data)
+    // couper au bord d'un bloc : le drapeau « dernier » ne correspond plus
+    await expect(decryptUenc(payload.slice(0, 14 + 65_536 + 16), keyHex)).rejects.toThrow()
+
+    const swapped = payload.slice()
+
+    swapped[14 + 65_536 + 16] ^= 1
+    await expect(decryptUenc(swapped, keyHex)).rejects.toThrow()
+    // un clair vide donne un bloc vide authentifié
+    const empty = await encryptUenc(new ArrayBuffer(0))
+
+    expect(empty.payload.length).toBe(14 + 16)
+    expect((await decryptUenc(empty.payload, empty.keyHex)).byteLength).toBe(0)
+  })
+
+  it("lit un blob produit par le codec Python (uenc_codec.py) et refuse l'ancienne v1", async () => {
+    const hex =
+      "55454e43020110a0a1a2a3a4a5a62231257fd66394e07500bb5baafbc978524e65aae2944eb803a99f6b9c784273fc29adc0d04515"
+    const key = Array.from({length: 32}, (_, i) => i.toString(16).padStart(2, "0")).join("")
+    const blob = Uint8Array.from(hex.match(/../g)!.map(h => parseInt(h, 16)))
+
+    expect(new TextDecoder().decode(await decryptUenc(blob, key))).toBe("UPlanet vecteur UENC v2")
+
+    const v1 = blob.slice()
+
+    v1[4] = 1
+    await expect(decryptUenc(v1, key)).rejects.toThrow("Invalid UENC")
   })
 
   it("vérifie les octets d'une passerelle contre le CID raw sha2-256", async () => {
